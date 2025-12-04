@@ -1,759 +1,424 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>기사의 모험 (Knight's Tour)</title>
-<style>
-  :root{
-    --board-size: 5;
-    --cell: 84px;
-    /* 클래식 체스 컬러 (그린/탄) */
-    --square-dark: #769656; /* green */
-    --square-light: #eeeed2; /* tan */
-    --visited-shade: rgba(0,0,0,.20);
-    --current-glow: 0 0 0 3px #10b981, 0 0 18px #10b98188;
-    /* 하이라이트는 면 채우기만 사용 (테두리/선 없음) */
-    --legal-fill: rgba(96,165,250,.18);
-    --hint1-fill: rgba(59,130,246,.35);
-  }
-  *{box-sizing:border-box}
-  html,body{height:100%}
-  body{
-    margin:0;
-    font-family: ui-sans-serif, system-ui, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", Segoe UI, Roboto, Helvetica, Arial;
-    color:#e5e7eb;
-    background: radial-gradient(1200px 800px at 20% -10%, #1f2937, #0b0c10);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    padding:24px
-  }
-  .app{width:min(100%,1100px)}
-  .topbar{
-    display:flex;
-    gap:12px;
-    align-items:center;
-    justify-content:space-between;
-    margin-bottom:14px
-  }
-  .title{
-    font-weight:800;
-    letter-spacing:.2px;
-    font-size:clamp(18px,3vw,26px)
-  }
-  .controls{
-    display:flex;
-    gap:8px;
-    flex-wrap:wrap;
-    align-items:center
-  }
-  button{
-    background:#111827;
-    border:1px solid #262b36;
-    color:#e5e7eb;
-    padding:8px 12px;
-    border-radius:10px;
-    cursor:pointer;
-    transition:.15s transform, .15s opacity;
-    font-weight:600
-  }
-  button:hover{transform:translateY(-1px)}
-  button[disabled]{opacity:.45; cursor:not-allowed}
-  .pill{
-    padding:6px 10px;
-    border-radius:999px;
-    background:#0b1220;
-    border:1px solid #233047
-  }
+  <meta charset="UTF-8" />
+  <title>Nine Men's Morris</title>
+  <style>
+    :root{
+      --board-bg:#d1d5db;
+      --board-edge:#4b5563;
+      --line:#4b5563;
+      --white-piece:#fef3c7;
+      --white-border:#b45309;
+      --black-piece:#020617;
+      --black-border:#e5e7eb;
+      --highlight:#3b82f6;
+    }
 
-  .board-wrap{
-    display:flex;
-    gap:18px;
-    align-items:flex-start;
-    flex-wrap:wrap
-  }
-  .board{
-    --size: calc(var(--cell)*var(--board-size));
-    width:var(--size);
-    height:var(--size);
-    display:grid;
-    grid-template-columns:repeat(var(--board-size), var(--cell));
-    grid-template-rows:repeat(var(--board-size), var(--cell));
-    border-radius:16px;
-    overflow:hidden;
-    box-shadow:0 10px 40px #0006;
-    border:2px solid #2a2f3a;
-    position:relative;
-    z-index:0
-  }
-  .square{
-    position:relative;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    user-select:none
-  }
-  .square.light{background:var(--square-light)}
-  .square.dark{background:var(--square-dark)}
-  .square.visited::after{
-    content:"";
-    position:absolute;
-    inset:0;
-    background:var(--visited-shade)
-  }
-  .square.current{box-shadow: var(--current-glow) inset}
-  /* 이동 가능: 면 채우기만 (파란빛) */
-  .square.legal::after{
-    content:"";
-    position:absolute;
-    inset:0;
-    background: var(--legal-fill);
-    pointer-events:none
-  }
-  /* 힌트(최선 1수): 더 진한 면 채우기 (배지 없음) */
-  .square.hint1::after{
-    content:"";
-    position:absolute;
-    inset:0;
-    background: var(--hint1-fill);
-    pointer-events:none
-  }
+    *{box-sizing:border-box;}
 
-  .idx{
-    position:absolute;
-    inset:0;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-weight:800;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New";
-    color:#111;
-    mix-blend-mode:multiply;
-    z-index:1;
-    font-size: clamp(12px, calc(var(--cell)*0.2), 20px)
-  }
-  .idx.visited{color:#333; opacity:.85}
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, "Apple SD Gothic Neo",
+        "Noto Sans KR", Segoe UI, Roboto, Helvetica, Arial;
+      text-align: center;
+      background: #f3f4f6;
+      margin: 0;
+      padding: 40px 16px;
+    }
+    h1 {
+      margin-top: 0;
+      margin-bottom: 16px;
+    }
+    #start-screen,
+    #game-screen {
+      max-width: 640px;
+      margin: 0 auto;
+    }
+    .hidden {
+      display: none;
+    }
+    button {
+      padding: 10px 16px;
+      margin: 6px;
+      font-size: 15px;
+      cursor: pointer;
+      border-radius: 8px;
+      border: 1px solid #4b5563;
+      background: #ffffff;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+      transition: 0.15s transform, 0.15s box-shadow, 0.15s background;
+    }
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+      background: #f9fafb;
+    }
 
-  .knight{
-    position:absolute;
-    z-index:2;
-    font-size: clamp(30px, calc(var(--cell)*0.60), 56px);
-    filter: drop-shadow(0 4px 6px rgba(0,0,0,.35))
-  }
+    #info-bar {
+      margin-bottom: 8px;
+      font-size: 15px;
+    }
+    #info-bar > div {
+      margin: 2px 0;
+    }
+    #role-text{
+      font-size:13px;
+      color:#4b5563;
+      margin-bottom:8px;
+      min-height:18px;
+    }
 
-  .side{
-    flex:1;
-    min-width:260px;
-    background:#0b1220;
-    border:1px solid #1f2a44;
-    border-radius:16px;
-    padding:14px
-  }
-  .side h3{margin:.2rem 0 .6rem; font-size:16px}
-  .meta{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:8px;
-    font-size:14px
-  }
-  .meta div{
-    background:#0e1726;
-    border:1px solid #25324a;
-    padding:8px 10px;
-    border-radius:10px
-  }
+    #board-wrapper {
+      display: flex;
+      justify-content: center;
+    }
+    #board {
+      width: 400px;
+      max-width: 90vw;
+      aspect-ratio: 1 / 1;
+      position: relative;
+      border-radius: 24px;
+      background: radial-gradient(circle at 20% -10%, #e5e7eb, var(--board-bg));
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
+      border: 3px solid var(--board-edge);
+      overflow: hidden;
+    }
 
-  .toast{
-    position:fixed;
-    right:16px;
-    bottom:16px;
-    background:#0b1220;
-    border:1px solid #1f2a44;
-    padding:10px 12px;
-    border-radius:10px;
-    font-size:14px;
-    opacity:0;
-    transform:translateY(8px);
-    transition:.2s
-  }
-  .toast.show{
-    opacity:1;
-    transform:translateY(0)
-  }
+    /* 세 개의 정사각형만 사용 (중앙 십자가 선 없음) */
+    .square{
+      position:absolute;
+      border:2px solid var(--line);
+      pointer-events:none;
+      z-index:0;
+      background:transparent;
+    }
+    .square.outer { top:10%; left:10%; right:10%; bottom:10%; }
+    .square.middle{ top:20%; left:20%; right:20%; bottom:20%; }
+    .square.inner { top:30%; left:30%; right:30%; bottom:30%; }
 
-  /* overlays */
-  .overlay{
-    position:fixed;
-    inset:0;
-    background: radial-gradient(1000px 700px at 30% -10%, #18212f, #090b0f);
-    display:none;
-    align-items:center;
-    justify-content:center;
-    z-index:10000;
-    pointer-events:auto
-  }
-  .card{
-    background:#0b1220;
-    border:1px solid #1f2a44;
-    border-radius:16px;
-    padding:22px;
-    width:min(92vw,560px)
-  }
-  .card h1{margin:0 0 8px; font-size:24px}
-  .card p{margin:0 0 12px; opacity:.9}
-</style>
+    .cell {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      position: absolute;
+      transform: translate(-50%, -50%);
+      box-sizing: border-box;
+      z-index: 1;
+      cursor:pointer;
+    }
+    .cell.empty {
+      background-color: #e5e7eb;
+      border: 2px solid var(--board-edge);
+    }
+    .cell.W {
+      background-color: var(--white-piece);
+      border: 3px solid var(--white-border);
+      box-shadow: 0 0 0 2px rgba(255,255,255,0.7);
+    }
+    .cell.B {
+      background-color: var(--black-piece);
+      border: 3px solid var(--black-border);
+      box-shadow: 0 0 0 2px rgba(0,0,0,0.5);
+    }
+    .cell.selected {
+      box-shadow: 0 0 0 4px rgba(59,130,246,0.9);
+    }
+
+    #hint-text {
+      margin-top: 10px;
+      font-size: 13px;
+      color: #4b5563;
+      min-height: 20px;
+    }
+
+    /* 결과 오버레이 */
+    #result-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.55);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+    }
+    #result-overlay.hidden {
+      display: none;
+    }
+    #result-box {
+      background: #111827;
+      color: #f9fafb;
+      padding: 20px 24px;
+      border-radius: 16px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+      min-width: 260px;
+      max-width: 90vw;
+      text-align: center;
+      border: 1px solid #4b5563;
+    }
+    #result-message {
+      font-size: 22px;
+      margin-bottom: 10px;
+    }
+    #result-box p {
+      margin: 4px 0 14px;
+      font-size: 13px;
+      color: #e5e7eb;
+    }
+  </style>
 </head>
 <body>
-  <div class="app">
-    <div class="topbar">
-      <div class="title">♞ 기사의 모험 <span class="pill" id="stageLabel">Stage 1 · 5×5</span></div>
-      <div class="controls">
-        <button id="btnStartScreen">초기 화면</button>
-        <button id="btnReset">리셋</button>
-        <button id="btnUndo" disabled>되돌리기(1회)</button>
-        <button id="btnHint">힌트(최선 1수)</button>
-        <button id="btnNext" disabled>다음 스테이지 ▶</button>
+  <!-- 시작 화면 -->
+  <div id="start-screen">
+    <h1>Nine Men's Morris</h1>
+    <p>혼자 게임하기: 플레이어 vs 컴퓨터 (선/후공 랜덤)</p>
+    <p>둘이 게임하기: 같은 컴퓨터에서 번갈아 두기</p>
+    <button id="btn-single">혼자 게임하기</button>
+    <button id="btn-multi">둘이 게임하기</button>
+  </div>
+
+  <!-- 게임 화면 -->
+  <div id="game-screen" class="hidden">
+    <div id="info-bar">
+      <div id="mode-text"></div>
+      <div id="turn-text"></div>
+    </div>
+    <div id="role-text"></div>
+
+    <div id="board-wrapper">
+      <div id="board">
+        <!-- 세 개의 정사각형 -->
+        <div class="square outer"></div>
+        <div class="square middle"></div>
+        <div class="square inner"></div>
+
+        <!-- 바깥 8개 -->
+        <div class="cell empty" data-index="0"  style="left:10%; top:10%;"></div>
+        <div class="cell empty" data-index="1"  style="left:50%; top:10%;"></div>
+        <div class="cell empty" data-index="2"  style="left:90%; top:10%;"></div>
+
+        <div class="cell empty" data-index="9"  style="left:10%; top:50%;"></div>
+        <div class="cell empty" data-index="14" style="left:90%; top:50%;"></div>
+
+        <div class="cell empty" data-index="21" style="left:10%; top:90%;"></div>
+        <div class="cell empty" data-index="22" style="left:50%; top:90%;"></div>
+        <div class="cell empty" data-index="23" style="left:90%; top:90%;"></div>
+
+        <!-- 중간 8개 -->
+        <div class="cell empty" data-index="3"  style="left:20%; top:20%;"></div>
+        <div class="cell empty" data-index="4"  style="left:50%; top:20%;"></div>
+        <div class="cell empty" data-index="5"  style="left:80%; top:20%;"></div>
+
+        <div class="cell empty" data-index="10" style="left:20%; top:50%;"></div>
+        <div class="cell empty" data-index="13" style="left:80%; top:50%;"></div>
+
+        <div class="cell empty" data-index="18" style="left:20%; top:80%;"></div>
+        <div class="cell empty" data-index="19" style="left:50%; top:80%;"></div>
+        <div class="cell empty" data-index="20" style="left:80%; top:80%;"></div>
+
+        <!-- 안쪽 8개 -->
+        <div class="cell empty" data-index="6"  style="left:30%; top:30%;"></div>
+        <div class="cell empty" data-index="7"  style="left:50%; top:30%;"></div>
+        <div class="cell empty" data-index="8"  style="left:70%; top:30%;"></div>
+
+        <div class="cell empty" data-index="11" style="left:30%; top:50%;"></div>
+        <div class="cell empty" data-index="12" style="left:70%; top:50%;"></div>
+
+        <div class="cell empty" data-index="15" style="left:30%; top:70%;"></div>
+        <div class="cell empty" data-index="16" style="left:50%; top:70%;"></div>
+        <div class="cell empty" data-index="17" style="left:70%; top:70%;"></div>
       </div>
     </div>
 
-    <div class="board-wrap">
-      <div id="board" class="board" aria-label="체스판" role="grid"></div>
-      <aside class="side">
-        <h3>진행 정보</h3>
-        <div class="meta">
-          <div>방문 수: <b id="moves">0</b></div>
-          <div>전체 칸: <b id="total">25</b></div>
-          <div>남은 칸: <b id="left">25</b></div>
-          <div>경과 시간: <b id="elapsed">00:00</b></div>
-          <div>스테이지: <b id="stageHuman">1 / 5</b></div>
-        </div>
-      </aside>
+    <div id="hint-text"></div>
+
+    <div style="margin-top:14px;">
+      <button id="btn-back">처음으로</button>
     </div>
   </div>
 
-  <!-- Start overlay -->
-  <div class="overlay" id="start">
-    <div class="card">
-      <h1>♞ 기사의 모험</h1>
-      <p>나이트의 규칙으로 모든 칸을 한 번씩만 방문하세요. 스테이지는 5×5 → 9×9 순으로 자동 진행됩니다.</p>
-      <button id="btnStart">게임 시작</button>
+  <!-- 결과 오버레이 -->
+  <div id="result-overlay" class="hidden">
+    <div id="result-box">
+      <div id="result-message"></div>
+      <p id="result-detail"></p>
+      <button id="btn-restart">같은 모드로 다시 하기</button>
+      <button id="btn-to-start">처음 화면으로</button>
     </div>
   </div>
 
-  <!-- Final overlay -->
-  <div class="overlay" id="final">
-    <div class="card">
-      <h1>모든 스테이지 클리어! 🎉</h1>
-      <p id="finalSummary">결과 요약</p>
-      <button id="btnFinalToStart">초기 화면으로</button>
-    </div>
-  </div>
+  <script>
+    const MODE = { SINGLE:'single', MULTI:'multi' };
+    const EMPTY = null, WHITE='W', BLACK='B';
 
-  <div class="toast" id="toast">안내</div>
+    const AI_DELAY = 3000;       // 플레이어 턴 끝나고 AI가 두기까지 딜레이
+    const AI_CHAIN_DELAY = 800;  // AI가 밀 만든 뒤 말 제거할 때 딜레이
 
-<script>
-(function(){
-  const stages=[5,6,7,8,9];
-  let stageIndex=0;
-  let N=stages[stageIndex];
+    let mode = null;
+    let board = Array(24).fill(EMPTY);
+    let currentSide = WHITE;
+    let piecesToPlace = { W:9, B:9 };
+    let pieceCount   = { W:0, B:0 };
 
-  const boardEl=document.getElementById('board');
-  const startOverlay=document.getElementById('start');
-  const finalOverlay=document.getElementById('final');
-  const btnStart=document.getElementById('btnStart');
-  const btnStartScreen=document.getElementById('btnStartScreen');
-  const btnFinalToStart=document.getElementById('btnFinalToStart');
-  const btnReset=document.getElementById('btnReset');
-  const btnUndo=document.getElementById('btnUndo');
-  const btnHint=document.getElementById('btnHint');
-  const btnNext=document.getElementById('btnNext');
-  const stageLabel=document.getElementById('stageLabel');
-  const movesEl=document.getElementById('moves');
-  const totalEl=document.getElementById('total');
-  const leftEl=document.getElementById('left');
-  const stageHumanEl=document.getElementById('stageHuman');
-  const elapsedEl=document.getElementById('elapsed');
-  const toast=document.getElementById('toast');
+    let humanSide = null, aiSide = null;
+    let gameOver = false;
+    let mustRemoveSide = null;
+    let selectedIndex = null;
 
-  const knightMoves=[[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2]];
+    const startScreen = document.getElementById('start-screen');
+    const gameScreen  = document.getElementById('game-screen');
+    const resultOverlay = document.getElementById('result-overlay');
+    const resultMessage = document.getElementById('result-message');
+    const resultDetail  = document.getElementById('result-detail');
+    const modeText  = document.getElementById('mode-text');
+    const turnText  = document.getElementById('turn-text');
+    const roleText  = document.getElementById('role-text');
+    const hintText  = document.getElementById('hint-text');
+    const boardEl   = document.getElementById('board');
 
-  let current=null;
-  let path=[];
-  let visited=[];
-  let stageStart=null;
-  let tickTimer=null;
-  let totalMillis=0;
-  const perStage=[0,0,0,0,0];
-  let canUndo=false;
-
-  // 힌트 제한
-  const HINT_LIMIT_PER_STAGE = 5;
-  let hintUsed = 0;
-
-  // Hidden cheat
-  let cheatArmed=false;
-  let cheatTimer=null;
-
-  // Helpers
-  const idx=(r,c)=>r*N+c;
-  const inBounds=(r,c)=>r>=0&&c>=0&&r<N&&c<N;
-  const isOverlayVisible=()=>
-    getComputedStyle(startOverlay).display!=='none' ||
-    getComputedStyle(finalOverlay).display!=='none';
-
-  const fmt=ms=>{
-    const s=Math.floor(ms/1000);
-    const m=Math.floor(s/60);
-    const r=s%60;
-    return `${String(m).padStart(2,'0')}:${String(r).padStart(2,'0')}`;
-  };
-  const setVar=(k,v)=>document.documentElement.style.setProperty(k,v);
-
-  function showToast(msg){
-    toast.textContent=msg;
-    toast.classList.add('show');
-    setTimeout(()=>toast.classList.remove('show'),1100);
-  }
-
-  function startTick(){
-    stopTick();
-    tickTimer=setInterval(()=>{
-      const ms=(stageStart?Date.now()-stageStart:0)+perStage[stageIndex];
-      elapsedEl.textContent=fmt(ms);
-    },200);
-  }
-
-  function stopTick(){
-    if(tickTimer){
-      clearInterval(tickTimer);
-      tickTimer=null;
-    }
-  }
-
-  function computeCellPx(){
-    const vh = window.innerHeight;
-    const vw = window.innerWidth;
-    const sideReserve = 420;
-    const topReserve = 220;
-    const maxBoard = Math.max(320, Math.min(vh - topReserve, vw - sideReserve));
-    return Math.max(42, Math.min(88, Math.floor(maxBoard / N)));
-  }
-
-  function buildBoard(){
-    boardEl.innerHTML='';
-    boardEl.style.setProperty('--board-size',N);
-    const cellPx=computeCellPx();
-    setVar('--cell', cellPx+'px');
-
-    visited=Array.from({length:N},()=>Array(N).fill(0));
-    current=null;
-    path=[];
-    canUndo=false;
-    updateHUD();
-
-    for(let r=0;r<N;r++){
-      for(let c=0;c<N;c++){
-        const sq=document.createElement('div');
-        sq.className='square '+(((r+c)%2===0)?'light':'dark');
-        sq.dataset.r=r;
-        sq.dataset.c=c;
-
-        const span=document.createElement('div');
-        span.className='idx';
-        sq.appendChild(span);
-
-        sq.addEventListener('click', onSquareClick, {passive:true});
-        boardEl.appendChild(sq);
-      }
-    }
-  }
-
-  function clearDecor(){
-    for(const sq of boardEl.children){
-      sq.classList.remove('visited','current','legal','hint1');
-      const span=sq.querySelector('.idx');
-      if(span){
-        span.classList.remove('visited');
-        span.textContent='';
-      }
-      const k=sq.querySelector('.knight');
-      if(k) k.remove();
-
-      // 예전 힌트 배지 제거용 (지금은 생성 안 함, 방어용)
-      const badges=sq.querySelectorAll('.hint-badge');
-      badges.forEach(b=>b.remove());
-    }
-  }
-
-  function render(){
-    clearDecor();
-
-    for(let r=0;r<N;r++){
-      for(let c=0;c<N;c++){
-        const n=visited[r][c];
-        if(n>0){
-          const sq=boardEl.children[idx(r,c)];
-          sq.classList.add('visited');
-          const sp=sq.querySelector('.idx');
-          sp.textContent=n;
-          sp.classList.add('visited');
-        }
-      }
-    }
-
-    if(current){
-      const sq=boardEl.children[idx(current.r,current.c)];
-      sq.classList.add('current');
-      const k=document.createElement('div');
-      k.className='knight';
-      k.textContent='♞';
-      sq.appendChild(k);
-
-      for(const [dr,dc] of knightMoves){
-        const nr=current.r+dr;
-        const nc=current.c+dc;
-        if(inBounds(nr,nc) && !visited[nr][nc]){
-          boardEl.children[idx(nr,nc)].classList.add('legal');
-        }
-      }
-    }
-    updateHUD();
-  }
-
-  function onSquareClick(e){
-    if(isOverlayVisible()) return;
-
-    const r=+e.currentTarget.dataset.r;
-    const c=+e.currentTarget.dataset.c;
-
-    // 첫 클릭: 시작 칸 선택
-    if(!current){
-      current={r,c};
-      visited[r][c]=1;
-      path=[{r,c}];
-      canUndo=true;
-
-      if(!stageStart){
-        stageStart=Date.now();
-        startTick();
-      }
-      render();
-      return;
-    }
-
-    const legal=knightMoves.some(([dr,dc])=> current.r+dr===r && current.c+dc===c);
-    if(!legal || visited[r][c]) return;
-
-    current={r,c};
-    visited[r][c]=path.length+1;
-    path.push({r,c});
-    canUndo=true;
-    render();
-
-    if(path.length===N*N){
-      const spent=(stageStart?Date.now()-stageStart:0);
-      perStage[stageIndex]+=spent;
-      totalMillis+=spent;
-      stageStart=null;
-      stopTick();
-      elapsedEl.textContent=fmt(perStage[stageIndex]);
-      showToast(`Stage ${stageIndex+1} 클리어!`);
-      btnNext.disabled=false;
-      canUndo=false;
-      updateHUD();
-    }
-  }
-
-  function updateHUD(){
-    movesEl.textContent=path.length;
-    totalEl.textContent=N*N;
-    leftEl.textContent=N*N-path.length;
-    stageHumanEl.textContent=`${stageIndex+1} / ${stages.length}`;
-    stageLabel.textContent=`Stage ${stageIndex+1} · ${N}×${N}`;
-
-    btnNext.disabled = (path.length!==N*N);
-    btnUndo.disabled = !canUndo || path.length===0;
-  }
-
-  function newGame(){
-    buildBoard();
-    render();
-    stageStart=null;
-    stopTick();
-    elapsedEl.textContent='00:00';
-
-    // 힌트 카운트 초기화
-    hintUsed = 0;
-    btnHint.disabled = false;
-  }
-
-  function resetStage(){
-    buildBoard();
-    render();
-
-    // 리셋 시 힌트도 다시 0/5
-    hintUsed = 0;
-    btnHint.disabled = false;
-  }
-
-  function undo(){
-    if(!canUndo || path.length===0) return;
-
-    if(path.length===1){
-      visited[path[0].r][path[0].c]=0;
-      path=[];
-      current=null;
-      canUndo=false;
-      render();
-      return;
-    }
-    const last=path.pop();
-    visited[last.r][last.c]=0;
-    current=path[path.length-1] || null;
-    canUndo=false;
-    render();
-  }
-
-  // Hint: 최선 1수 (면 강조만, 배지 없음) + 스테이지당 5회 제한
-  function degree(r,c){
-    let d=0;
-    for(const [dr,dc] of knightMoves){
-      const nr=r+dr, nc=c+dc;
-      if(inBounds(nr,nc) && !visited[nr][nc]) d++;
-    }
-    return d;
-  }
-
-  function sortedCandidates(r,c){
-    const out=[];
-    for(const [dr,dc] of knightMoves){
-      const nr=r+dr,nc=c+dc;
-      if(inBounds(nr,nc) && !visited[nr][nc]){
-        out.push({r:nr,c:nc,deg:degree(nr,nc)});
-      }
-    }
-    out.sort((a,b)=>a.deg-b.deg || Math.random()-0.5);
-    return out;
-  }
-
-  function showBest1(){
-    if(!current){
-      showToast('시작 칸을 먼저 선택하세요');
-      return;
-    }
-
-    // 힌트 5회 제한
-    if(hintUsed >= HINT_LIMIT_PER_STAGE){
-      btnHint.disabled = true;
-      showToast('이번 스테이지에서 힌트를 모두 사용했어요');
-      return;
-    }
-
-    // 기존 힌트 흔적 제거
-    for(const sq of boardEl.children){
-      sq.classList.remove('hint1');
-      const hb=sq.querySelector('.hint-badge');
-      if(hb) hb.remove();
-    }
-
-    const cs=sortedCandidates(current.r,current.c).slice(0,1);
-    if(!cs.length){
-      showToast('가능한 수가 없어요');
-      return;
-    }
-
-    const p=cs[0];
-    const sq=boardEl.children[idx(p.r,p.c)];
-    sq.classList.add('hint1'); // 최선 1수만 진하게 면 채우기
-
-    hintUsed++;
-    if(hintUsed >= HINT_LIMIT_PER_STAGE){
-      btnHint.disabled = true;
-      showToast('이번 스테이지 힌트(5회)를 모두 사용했어요');
-    } else {
-      showToast(`힌트 사용: ${hintUsed}/${HINT_LIMIT_PER_STAGE}`);
-    }
-  }
-
-  // Hidden autocomplete (cheat)
-  function warnsdorffSolve(start){
-    let cur=start || {r:0,c:0};
-    if(!start){
-      visited[cur.r][cur.c]=1;
-      path=[{...cur}];
-    }
-    const deg=(r,c)=>{
-      let d=0;
-      for(const[dr,dc]of knightMoves){
-        const nr=r+dr,nc=c+dc;
-        if(inBounds(nr,nc)&&!visited[nr][nc]) d++;
-      }
-      return d;
+    const neighbors = {
+      0:[1,9],
+      1:[0,2,4],
+      2:[1,14],
+      3:[4,10],
+      4:[1,3,5,7],
+      5:[4,13],
+      6:[7,11],
+      7:[4,6,8],
+      8:[7,12],
+      9:[0,10,21],
+      10:[3,9,11,18],
+      11:[6,10,15],
+      12:[8,13,17],
+      13:[5,12,14,20],
+      14:[2,13,23],
+      15:[11,16],
+      16:[15,17,19],
+      17:[12,16],
+      18:[10,19],
+      19:[16,18,20,22],
+      20:[13,19],
+      21:[9,22],
+      22:[19,21,23],
+      23:[14,22]
     };
-    while(path.length<N*N){
-      let cand=[];
-      for(const[dr,dc]of knightMoves){
-        const nr=cur.r+dr,nc=cur.c+dc;
-        if(inBounds(nr,nc)&&!visited[nr][nc]){
-          cand.push({r:nr,c:nc,deg:deg(nr,nc)});
-        }
-      }
-      if(!cand.length) return false;
-      cand.sort((a,b)=>a.deg-b.deg || Math.random()-0.5);
-      const nxt=cand[0];
-      cur={r:nxt.r,c:nxt.c};
-      visited[cur.r][cur.c]=path.length+1;
-      path.push({...cur});
-    }
-    current={...path[path.length-1]};
-    return true;
-  }
 
-  function autoComplete(){
-    if(!current){
-      current={r:(N%2?Math.floor(N/2):1), c:(N%2?0:1)};
-      visited[current.r][current.c]=1;
-      path=[{...current}];
-    }
-    const snap=visited.map(r=>r.slice());
-    const start={...current};
+    const mills = [
+      [0,1,2],[3,4,5],[6,7,8],[9,10,11],
+      [12,13,14],[15,16,17],[18,19,20],[21,22,23],
+      [0,9,21],[3,10,18],[6,11,15],
+      [1,4,7],[16,19,22],
+      [8,12,17],[5,13,20],[2,14,23]
+    ];
 
-    for(let t=0;t<120;t++){
-      for(let r=0;r<N;r++){
-        for(let c=0;c<N;c++){
-          visited[r][c]=snap[r][c];
-        }
-      }
-      path=[{...start}];
-      current={...start};
-      knightMoves.sort(()=>Math.random()-0.5);
-      const ok=warnsdorffSolve(start);
-      if(ok){
-        render();
-        return true;
+    const otherSide = s => s===WHITE?BLACK:WHITE;
+    const cellEl = i => boardEl.querySelector('.cell[data-index="'+i+'"]');
+
+    function clearSelection(){
+      if(selectedIndex!==null) cellEl(selectedIndex)?.classList.remove('selected');
+      selectedIndex=null;
+    }
+    function resetBoardVisual(){
+      boardEl.querySelectorAll('.cell').forEach(c=>{
+        c.className='cell empty';
+      });
+    }
+    function placePiece(i,side){
+      board[i]=side;
+      pieceCount[side]++;
+      const el=cellEl(i);
+      if(el){
+        el.classList.remove('empty','W','B','selected');
+        el.classList.add(side);
       }
     }
-    render();
-    return false;
-  }
-
-  // Stage nav & final
-  function toStartScreen(){
-    finalOverlay.style.display='none';
-    startOverlay.style.display='flex';
-    stageIndex=0;
-    N=stages[0];
-    totalMillis=0;
-    for(let i=0;i<perStage.length;i++) perStage[i]=0;
-    newGame();
-  }
-
-  function nextStage(){
-    if(stageIndex<stages.length-1){
-      stageIndex++;
-      N=stages[stageIndex];
-      newGame();
-    } else {
-      showFinal();
+    function movePiece(from,to,side){
+      board[from]=EMPTY;
+      board[to]=side;
+      const a=cellEl(from), b=cellEl(to);
+      if(a){a.className='cell empty';}
+      if(b){
+        b.classList.remove('empty','W','B','selected');
+        b.classList.add(side);
+      }
     }
-  }
-
-  function prevStage(){
-    if(stageIndex>0){
-      stageIndex--;
-      N=stages[stageIndex];
-      newGame();
+    function removePiece(i,side){
+      if(board[i]!==side) return;
+      board[i]=EMPTY;
+      pieceCount[side]--;
+      const el=cellEl(i);
+      if(el){el.className='cell empty';}
     }
-  }
-
-  function showFinal(){
-    let html=`<b>총 소요 시간:</b> ${fmt(totalMillis)}<br><br>`;
-    html+='<b>스테이지별 기록</b><br>';
-    stages.forEach((sz,i)=>{
-      html+=`Stage ${i+1} (${sz}×${sz}) — ${fmt(perStage[i])}<br>`;
-    });
-    document.getElementById('finalSummary').innerHTML=html;
-    finalOverlay.style.display='flex';
-  }
-
-  // Buttons
-  btnReset.addEventListener('click', resetStage);
-  btnUndo.addEventListener('click', undo);
-  btnHint.addEventListener('click', showBest1);
-  btnNext.addEventListener('click', ()=>{
-    if(path.length===N*N) nextStage();
-  });
-
-  // Start buttons
-  btnStart.addEventListener('pointerdown', (ev)=>{
-    ev.preventDefault();
-    ev.stopPropagation();
-  });
-  btnStart.addEventListener('click', (ev)=>{
-    ev.preventDefault();
-    ev.stopPropagation();
-    requestAnimationFrame(()=>{
-      startOverlay.style.display='none';
-      newGame();
-    });
-  });
-
-  btnStartScreen.addEventListener('pointerdown', (ev)=>{
-    ev.preventDefault();
-    ev.stopPropagation();
-  });
-  btnStartScreen.addEventListener('click', (ev)=>{
-    ev.preventDefault();
-    ev.stopPropagation();
-    toStartScreen();
-  });
-
-  btnFinalToStart.addEventListener('pointerdown', (ev)=>{
-    ev.preventDefault();
-    ev.stopPropagation();
-  });
-  btnFinalToStart.addEventListener('click', (ev)=>{
-    ev.preventDefault();
-    ev.stopPropagation();
-    toStartScreen();
-  });
-
-  // Keyboard cheats
-  window.addEventListener('keydown', (e)=>{
-    if(e.code==='Backquote'){
-      cheatArmed=true;
-      clearTimeout(cheatTimer);
-      cheatTimer=setTimeout(()=>cheatArmed=false,1500);
+    function isMillAt(index,side){
+      return mills.some(m=>m.includes(index) && m.every(i=>board[i]===side));
     }
-    else if(e.key==='Enter' && cheatArmed){
-      cheatArmed=false;
-      clearTimeout(cheatTimer);
-      setTimeout(()=>{
-        const ok=autoComplete();
-        if(!ok) showToast('자동완성 실패');
-      },20);
-    }
-    else if(e.key==='ArrowRight'){
-      nextStage();
-    }
-    else if(e.key==='ArrowLeft'){
-      prevStage();
-    }
-    else if(e.key==='Escape'){
-      toStartScreen();
-    }
-  }, {passive:true});
 
-  window.addEventListener('resize', ()=>{
-    const cellPx=computeCellPx();
-    setVar('--cell', cellPx+'px');
-    render();
-  }, {passive:true});
+    function existsRemovableOpponentPiece(forSide){
+      const opp=otherSide(forSide);
+      return pieceCount[opp]>0;
+    }
+    function canRemoveThis(i,removerSide){
+      const opp=otherSide(removerSide);
+      return board[i]===opp;
+    }
 
-  startOverlay.style.display='flex';
-  newGame();
-})();
-</script>
-</body>
-</html>
+    function hasAnyLegalMove(side){
+      if(piecesToPlace.W>0 || piecesToPlace.B>0) return true;
+      if(pieceCount[side]<=2) return false;
+      for(let i=0;i<24;i++){
+        if(board[i]!==side) continue;
+        for(const n of neighbors[i]) if(board[n]===EMPTY) return true;
+      }
+      return false;
+    }
+
+    // -------- 평가 함수(조금 더 똑똑한 AI용) --------
+    function countPiecesOnBoard(side, arr){
+      let c=0;
+      for(let i=0;i<24;i++) if(arr[i]===side) c++;
+      return c;
+    }
+
+    function countPotentialMills(side, arr){
+      let score=0;
+      for(const m of mills){
+        const cells = m.map(i=>arr[i]);
+        const own = cells.filter(v=>v===side).length;
+        const opp = cells.filter(v=>v && v!==side).length;
+        if(opp>0) continue;
+        if(own===3) score+=2;
+        else if(own===2) score+=1;
+      }
+      return score;
+    }
+
+    function countLegalMovesForSide(side, arr){
+      // 배치 단계에서는 "빈 칸 수"로 근사
+      const hasPlacing = piecesToPlace.W>0 || piecesToPlace.B>0;
+      if(hasPlacing){
+        let empties=0;
+        for(let i=0;i<24;i++) if(arr[i]===EMPTY) empties++;
+        return empties;
+      }
+      if(countPiecesOnBoard(side,arr)<=2) return 0;
+      let cnt=0;
+      for(let i=0;i<24;i++){
+        if(arr[i]!==side) continue;
+        for(const n of neighbors[i]) if(arr[n]===EMPTY) cnt++;
+      }
+      return cnt;
+    }
+
+    function evaluateBoardForSide(side, arr){
+      const opp = otherSide(side);
+      const myPieces  = countPiecesOnBoard(side, arr);
+      const oppPieces = countPiecesOnBoard(opp,  arr);
+
+      let score = 0;
+      score += (myPieces - oppPieces) * 10;
+
+      const myPot  = countPotentialMills(side, arr);
+      const oppPot = countPotentialMills(opp,  arr);
+      score += (myPot - oppPot) * 3;
+
+      const myMoves  = countLegalMovesForSide(side, arr);
+      const oppMoves = countLegal
