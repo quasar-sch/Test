@@ -84,7 +84,7 @@
       overflow: hidden;
     }
 
-    /* 세 개의 정사각형만 사용 (중앙 십자가 선 없음) */
+    /* 세 개의 정사각형 (중앙 십자가 선 없음) */
     .square{
       position:absolute;
       border:2px solid var(--line);
@@ -250,8 +250,9 @@
     const MODE = { SINGLE:'single', MULTI:'multi' };
     const EMPTY = null, WHITE='W', BLACK='B';
 
-    const AI_DELAY = 3000;       // 플레이어 턴 끝나고 AI가 두기까지 딜레이
-    const AI_CHAIN_DELAY = 800;  // AI가 밀 만든 뒤 말 제거할 때 딜레이
+    // AI 딜레이
+    const AI_DELAY = 3000;       // 플레이어 턴 끝나고 AI가 두기까지
+    const AI_CHAIN_DELAY = 800;  // AI가 밀 만든 뒤 말 제거할 때
 
     let mode = null;
     let board = Array(24).fill(EMPTY);
@@ -371,7 +372,7 @@
       return false;
     }
 
-    // -------- 평가 함수(조금 더 똑똑한 AI용) --------
+    // ---- 평가 함수 (조금 더 똑똑한 AI용) ----
     function countPiecesOnBoard(side, arr){
       let c=0;
       for(let i=0;i<24;i++) if(arr[i]===side) c++;
@@ -392,7 +393,6 @@
     }
 
     function countLegalMovesForSide(side, arr){
-      // 배치 단계에서는 "빈 칸 수"로 근사
       const hasPlacing = piecesToPlace.W>0 || piecesToPlace.B>0;
       if(hasPlacing){
         let empties=0;
@@ -421,4 +421,369 @@
       score += (myPot - oppPot) * 3;
 
       const myMoves  = countLegalMovesForSide(side, arr);
-      const oppMoves = countLegal
+      const oppMoves = countLegalMovesForSide(opp,  arr);
+      score += (myMoves - oppMoves);
+
+      return score;
+    }
+
+    function checkGameOver(afterSide){
+      const opp=otherSide(afterSide);
+      if(pieceCount[opp]<=2 && piecesToPlace.W===0 && piecesToPlace.B===0){
+        endGame(afterSide,'pieces'); return true;
+      }
+      if(piecesToPlace.W===0 && piecesToPlace.B===0 && !hasAnyLegalMove(opp)){
+        endGame(afterSide,'noMoves'); return true;
+      }
+      return false;
+    }
+
+    function updateInfoBar(){
+      if(mode===MODE.SINGLE){
+        const who = humanSide===WHITE ? '플레이어 = 흰 말(선공)' : '플레이어 = 검은 말(후공)';
+        modeText.textContent=`모드: 혼자 게임하기 (${who})`;
+        roleText.textContent = humanSide===WHITE ? '플레이어 말: 흰 말' : '플레이어 말: 검은 말';
+      } else if(mode===MODE.MULTI){
+        modeText.textContent='모드: 둘이 게임하기';
+        roleText.textContent='';
+      } else {
+        modeText.textContent='';
+        roleText.textContent='';
+      }
+
+      let turn = currentSide===WHITE ? '흰 말 차례' : '검은 말 차례';
+      if(mode===MODE.SINGLE){
+        turn += currentSide===humanSide ? ' (플레이어)' : ' (컴퓨터)';
+      }
+      turnText.textContent=turn;
+
+      if(mustRemoveSide && mustRemoveSide===currentSide){
+        hintText.textContent='밀 완성! 상대 말을 하나 클릭해서 제거하세요.';
+        return;
+      }
+
+      if(piecesToPlace.W>0 || piecesToPlace.B>0){
+        hintText.textContent='포석 단계: 번갈아 자신의 말을 빈 점에 놓습니다. (각 9개)';
+      } else {
+        hintText.textContent='이동 단계: 자신의 말을 인접한 빈 점으로 한 칸씩 이동합니다. (대각선·점프 없음)';
+      }
+    }
+
+    function endGame(winner, reason){
+      gameOver=true;
+      let msg='', detail='';
+      if(mode===MODE.SINGLE){
+        msg = winner===humanSide ? '플레이어 승!' : '컴퓨터 승!';
+      } else {
+        msg = winner===WHITE ? '흰 말 승!' : '검은 말 승!';
+      }
+      if(reason==='noMoves') detail='상대가 더 이상 움직일 수 없어서 승리했습니다.';
+      else if(reason==='pieces') detail='상대 말이 2개 이하로 남아서 승리했습니다.';
+      resultMessage.textContent=msg;
+      resultDetail.textContent=detail;
+      resultOverlay.classList.remove('hidden');
+    }
+
+    function initGameState(){
+      board=Array(24).fill(EMPTY);
+      piecesToPlace={W:9,B:9};
+      pieceCount={W:0,B:0};
+      currentSide=WHITE;
+      gameOver=false;
+      mustRemoveSide=null;
+      clearSelection();
+      resetBoardVisual();
+    }
+
+    function goToGameScreen(){
+      startScreen.classList.add('hidden');
+      gameScreen.classList.remove('hidden');
+    }
+    function goToStartScreen(){
+      gameScreen.classList.add('hidden');
+      startScreen.classList.remove('hidden');
+      resultOverlay.classList.add('hidden');
+    }
+
+    function startSingleGame(){
+      mode=MODE.SINGLE;
+      initGameState();
+      humanSide = Math.random()<0.5 ? WHITE : BLACK;
+      aiSide    = otherSide(humanSide);
+      goToGameScreen();
+      updateInfoBar();
+      if(currentSide===aiSide) setTimeout(aiTurn, AI_DELAY);
+    }
+    function startMultiGame(){
+      mode=MODE.MULTI;
+      humanSide=null; aiSide=null;
+      initGameState();
+      goToGameScreen();
+      updateInfoBar();
+    }
+    function restartCurrentMode(){
+      resultOverlay.classList.add('hidden');
+      if(mode===MODE.SINGLE) startSingleGame();
+      else if(mode===MODE.MULTI) startMultiGame();
+    }
+
+    // 클릭 처리
+    function handleBoardClick(idx){
+      if(gameOver) return;
+      if(mode===MODE.SINGLE && currentSide===aiSide) return;
+
+      if(mustRemoveSide){
+        if(mustRemoveSide!==currentSide) return;
+        if(!canRemoveThis(idx,currentSide)) return;
+        const opp=otherSide(currentSide);
+        removePiece(idx,opp);
+        mustRemoveSide=null;
+        if(checkGameOver(currentSide)) return;
+        currentSide=otherSide(currentSide);
+        clearSelection();
+        updateInfoBar();
+        if(mode===MODE.SINGLE && currentSide===aiSide) setTimeout(aiTurn, AI_DELAY);
+        return;
+      }
+
+      if(piecesToPlace.W>0 || piecesToPlace.B>0){
+        handlePlacingClick(idx);
+      } else {
+        handleMovingClick(idx);
+      }
+    }
+
+    function handlePlacingClick(idx){
+      if(board[idx]!==EMPTY) return;
+      placePiece(idx,currentSide);
+      piecesToPlace[currentSide]--;
+
+      if(isMillAt(idx,currentSide) && existsRemovableOpponentPiece(currentSide)){
+        mustRemoveSide=currentSide;
+        updateInfoBar();
+        return;
+      }
+      if(checkGameOver(currentSide)) return;
+
+      currentSide=otherSide(currentSide);
+      updateInfoBar();
+      if(mode===MODE.SINGLE && currentSide===aiSide) setTimeout(aiTurn, AI_DELAY);
+    }
+
+    function handleMovingClick(idx){
+      const side=currentSide;
+      if(selectedIndex===null){
+        if(board[idx]!==side) return;
+        selectedIndex=idx;
+        cellEl(idx)?.classList.add('selected');
+      } else {
+        if(idx===selectedIndex){ clearSelection(); return; }
+
+        if(board[idx]!==EMPTY){
+          if(board[idx]===side){
+            cellEl(selectedIndex)?.classList.remove('selected');
+            selectedIndex=idx;
+            cellEl(idx)?.classList.add('selected');
+          }
+          return;
+        }
+
+        const from=selectedIndex, to=idx;
+        if(!neighbors[from].includes(to)) return;
+
+        movePiece(from,to,side);
+        clearSelection();
+
+        if(isMillAt(to,side) && existsRemovableOpponentPiece(side)){
+          mustRemoveSide=side;
+          updateInfoBar();
+          return;
+        }
+        if(checkGameOver(side)) return;
+        currentSide=otherSide(currentSide);
+        updateInfoBar();
+        if(mode===MODE.SINGLE && currentSide===aiSide) setTimeout(aiTurn, AI_DELAY);
+      }
+    }
+
+    // ---------- AI ----------
+    function aiTurn(){
+      if(gameOver || currentSide!==aiSide) return;
+
+      if(mustRemoveSide===aiSide){
+        const target=pickAiRemoveTarget(aiSide);
+        if(target!==null){
+          const opp=otherSide(aiSide);
+          removePiece(target,opp);
+          mustRemoveSide=null;
+          if(checkGameOver(aiSide)) return;
+          currentSide=otherSide(aiSide);
+          updateInfoBar();
+        }
+        return;
+      }
+
+      // 포석 단계
+      if(piecesToPlace.W>0 || piecesToPlace.B>0){
+        const idx=pickAiPlaceIndex(aiSide);
+        if(idx===null) return;
+        placePiece(idx,aiSide);
+        piecesToPlace[aiSide]--;
+
+        if(isMillAt(idx,aiSide) && existsRemovableOpponentPiece(aiSide)){
+          mustRemoveSide=aiSide;
+          updateInfoBar();
+          setTimeout(aiTurn, AI_CHAIN_DELAY);
+          return;
+        }
+        if(checkGameOver(aiSide)) return;
+        currentSide=otherSide(aiSide);
+        updateInfoBar();
+        return;
+      }
+
+      // 이동 단계
+      const move=pickAiMove(aiSide);
+      if(!move){
+        if(!hasAnyLegalMove(aiSide)) endGame(otherSide(aiSide),'noMoves');
+        return;
+      }
+      movePiece(move.from,move.to,aiSide);
+      if(isMillAt(move.to,aiSide) && existsRemovableOpponentPiece(aiSide)){
+        mustRemoveSide=aiSide;
+        updateInfoBar();
+        setTimeout(aiTurn, AI_CHAIN_DELAY);
+        return;
+      }
+      if(checkGameOver(aiSide)) return;
+      currentSide=otherSide(aiSide);
+      updateInfoBar();
+    }
+
+    function pickAiPlaceIndex(side){
+      const opp=otherSide(side);
+      const empties=[];
+      for(let i=0;i<24;i++) if(board[i]===EMPTY) empties.push(i);
+      if(!empties.length) return null;
+
+      // 1) 바로 밀 만드는 수
+      const winningMoves=[];
+      for(const i of empties){
+        board[i]=side;
+        if(isMillAt(i,side)) winningMoves.push(i);
+        board[i]=EMPTY;
+      }
+      if(winningMoves.length){
+        return winningMoves[Math.floor(Math.random()*winningMoves.length)];
+      }
+
+      // 2) 상대 밀 막는 수
+      const blockMoves=[];
+      for(const i of empties){
+        board[i]=opp;
+        if(isMillAt(i,opp)) blockMoves.push(i);
+        board[i]=EMPTY;
+      }
+      if(blockMoves.length){
+        return blockMoves[Math.floor(Math.random()*blockMoves.length)];
+      }
+
+      // 3) 평가 함수로 가장 좋은 수 선택
+      let bestIndex=null;
+      let bestScore=-Infinity;
+      for(const i of empties){
+        board[i]=side;
+        const score=evaluateBoardForSide(side, board);
+        board[i]=EMPTY;
+        if(score>bestScore){
+          bestScore=score;
+          bestIndex=i;
+        }
+      }
+      return bestIndex ?? empties[0];
+    }
+
+    function pickAiRemoveTarget(side){
+      const opp=otherSide(side);
+      const cand=[];
+      for(let i=0;i<24;i++) if(board[i]===opp) cand.push(i);
+      if(!cand.length) return null;
+      let best=cand[0], bestScore=-Infinity;
+      for(const i of cand){
+        const saved=board[i];
+        board[i]=EMPTY;
+        const score=evaluateBoardForSide(side, board);
+        board[i]=saved;
+        if(score>bestScore){ bestScore=score; best=i; }
+      }
+      return best;
+    }
+
+    function pickAiMove(side){
+      const opp=otherSide(side);
+      const moves=[];
+      for(let from=0;from<24;from++){
+        if(board[from]!==side) continue;
+        for(const to of neighbors[from]) if(board[to]===EMPTY) moves.push({from,to});
+      }
+      if(!moves.length) return null;
+
+      // 1) 밀 만드는 이동
+      const millMoves=[];
+      for(const m of moves){
+        board[m.from]=EMPTY; board[m.to]=side;
+        const ok=isMillAt(m.to,side);
+        board[m.to]=EMPTY; board[m.from]=side;
+        if(ok) millMoves.push(m);
+      }
+      if(millMoves.length){
+        return millMoves[Math.floor(Math.random()*millMoves.length)];
+      }
+
+      // 2) 상대 밀 막는 이동
+      const blockMoves=[];
+      for(const m of moves){
+        board[m.from]=EMPTY; board[m.to]=opp;
+        const ok=isMillAt(m.to,opp);
+        board[m.to]=EMPTY; board[m.from]=side;
+        if(ok) blockMoves.push(m);
+      }
+      if(blockMoves.length){
+        return blockMoves[Math.floor(Math.random()*blockMoves.length)];
+      }
+
+      // 3) 평가 함수로 가장 좋은 이동
+      let bestMove=moves[0];
+      let bestScore=-Infinity;
+      for(const m of moves){
+        const from=m.from, to=m.to;
+        board[from]=EMPTY; board[to]=side;
+        const score=evaluateBoardForSide(side, board);
+        board[to]=EMPTY; board[from]=side;
+        if(score>bestScore){
+          bestScore=score;
+          bestMove=m;
+        }
+      }
+      return bestMove;
+    }
+
+    // 이벤트 바인딩
+    document.getElementById('btn-single').addEventListener('click',startSingleGame);
+    document.getElementById('btn-multi').addEventListener('click',startMultiGame);
+    document.getElementById('btn-back').addEventListener('click',goToStartScreen);
+    document.getElementById('btn-restart').addEventListener('click',restartCurrentMode);
+    document.getElementById('btn-to-start').addEventListener('click',()=>{
+      resultOverlay.classList.add('hidden');
+      goToStartScreen();
+    });
+
+    boardEl.addEventListener('click',e=>{
+      const cell=e.target.closest('.cell');
+      if(!cell) return;
+      const idx=Number(cell.dataset.index);
+      handleBoardClick(idx);
+    });
+  </script>
+</body>
+</html>
