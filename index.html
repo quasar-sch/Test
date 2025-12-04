@@ -38,7 +38,6 @@ button:hover{
   background:#f9fafb;
   box-shadow:0 4px 10px rgba(0,0,0,0.12);
 }
-
 .hidden{display:none;}
 
 #game-screen,#start-screen{
@@ -57,36 +56,22 @@ button:hover{
   background:radial-gradient(circle at 20% -10%,#e5e7eb,var(--board-bg));
   border:3px solid var(--board-edge);
   box-shadow:0 12px 40px rgba(0,0,0,0.22);
+  overflow:hidden;
 }
 
-/* 세 겹 네모 */
-.square{
+/* SVG 라인 */
+#edges{
   position:absolute;
-  border:2px solid var(--line);
-  pointer-events:none;
-}
-.square.outer{top:10%;left:10%;right:10%;bottom:10%;}
-.square.middle{top:20%;left:20%;right:20%;bottom:20%;}
-.square.inner{top:30%;left:30%;right:30%;bottom:30%;}
-
-/* 십자가: 가장 안쪽 사각형 안쪽은 비워두고, 바깥 부분만 선 */
-.cross-line{
-  position:absolute;
-  background:var(--line);
-  pointer-events:none;
+  inset:0;
   z-index:0;
 }
-.cross-v{width:2px;}
-.cross-h{height:2px;}
-/* 위쪽 세그먼트: 위쪽 외곽 → 안쪽 사각형 위쪽까지 */
-.cross-v-top{left:50%; top:10%; height:20%; margin-left:-1px;}
-/* 아래 세그먼트: 안쪽 사각형 아래쪽 → 아래 외곽까지 */
-.cross-v-bottom{left:50%; top:70%; height:20%; margin-left:-1px;}
-/* 왼쪽 세그먼트: 왼 외곽 → 안쪽 사각형 왼쪽까지 */
-.cross-h-left{top:50%; left:10%; width:20%; margin-top:-1px;}
-/* 오른쪽 세그먼트: 안쪽 사각형 오른쪽 → 오른 외곽까지 */
-.cross-h-right{top:50%; left:70%; width:20%; margin-top:-1px;}
+#edges line{
+  stroke:var(--line);
+  stroke-width:2.5;
+  stroke-linecap:round;
+}
 
+/* 말(점) */
 .cell{
   width:24px;height:24px;border-radius:50%;
   position:absolute;transform:translate(-50%,-50%);
@@ -138,17 +123,10 @@ button:hover{
 
   <div id="board-wrapper">
     <div id="board">
+      <!-- 이동 경로(선)는 JS에서 adjacency 기반으로 SVG로 자동 생성 -->
+      <svg id="edges" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
 
-      <div class="square outer"></div>
-      <div class="square middle"></div>
-      <div class="square inner"></div>
-
-      <!-- 십자가 네 조각 (안쪽 네모는 비워둠) -->
-      <div class="cross-line cross-v cross-v-top"></div>
-      <div class="cross-line cross-v cross-v-bottom"></div>
-      <div class="cross-line cross-h cross-h-left"></div>
-      <div class="cross-line cross-h cross-h-right"></div>
-
+      <!-- 24개 점 위치 -->
       <!-- 바깥 8 -->
       <div class="cell empty" data-index="0"  style="left:10%; top:10%;"></div>
       <div class="cell empty" data-index="1"  style="left:50%; top:10%;"></div>
@@ -178,13 +156,12 @@ button:hover{
       <div class="cell empty" data-index="15" style="left:30%; top:70%;"></div>
       <div class="cell empty" data-index="16" style="left:50%; top:70%;"></div>
       <div class="cell empty" data-index="17" style="left:70%; top:70%;"></div>
-
     </div>
   </div>
 
-  <div id="hint-text"></div>
+  <div id="hint-text" style="margin-top:8px;font-size:13px;color:#4b5563;"></div>
 
-  <button id="btn-back">처음으로</button>
+  <button id="btn-back" style="margin-top:10px;">처음으로</button>
 </div>
 
 <!-- 결과화면 -->
@@ -198,39 +175,62 @@ button:hover{
 </div>
 
 <script>
+// ===== 기본 상수 & 상태 =====
 const MODE = { SINGLE:'single', MULTI:'multi' };
+const EMPTY = null, WHITE='W', BLACK='B';
+const MAX_PIECES = 9;
+const AI_DELAY = 500; // 인공지능 딜레이 (0.5초)
+
 let mode = null;
-
-const EMPTY = null;
-const WHITE = 'W';
-const BLACK = 'B';
-
-let board = Array(24).fill(null);
-
+let board = Array(24).fill(EMPTY);
 let currentSide = WHITE;
 let humanSide = null;
 let aiSide = null;
-
-let placedWhite = 0;
-let placedBlack = 0;
-const MAX_PIECES = 9;
-
+let placed = { W:0, B:0 };   // 포석으로 올린 말 개수
+let count  = { W:0, B:0 };   // 현재 판 위의 말 개수
 let selectedIndex = null;
-let gamePhase = 'placing';
+let gameOver = false;
 
-const AI_DELAY = 500; // 이전 1000ms → 절반으로 줄임
-
-const adj = {
-  0:[1,9],       1:[0,2,4],        2:[1,14],
-  3:[4,10],      4:[1,3,5,7],      5:[4,13],
-  6:[7,11],      7:[4,6,8],        8:[7,12],
-  9:[0,10,21],   10:[3,9,11,18],   11:[6,10,15],
-  12:[8,13,17],  13:[5,12,14,20],  14:[2,13,23],
-  15:[11,16],    16:[15,17,19],    17:[12,16],
-  18:[10,19],    19:[16,18,20,22], 20:[13,19],
-  21:[9,22],     22:[19,21,23],    23:[14,22]
+// 말 좌표 (퍼센트 단위, 위의 style과 동일)
+const coord = {
+  0:{x:10,y:10}, 1:{x:50,y:10}, 2:{x:90,y:10},
+  3:{x:20,y:20}, 4:{x:50,y:20}, 5:{x:80,y:20},
+  6:{x:30,y:30}, 7:{x:50,y:30}, 8:{x:70,y:30},
+  9:{x:10,y:50},10:{x:20,y:50},11:{x:30,y:50},12:{x:70,y:50},13:{x:80,y:50},14:{x:90,y:50},
+ 15:{x:30,y:70},16:{x:50,y:70},17:{x:70,y:70},
+ 18:{x:20,y:80},19:{x:50,y:80},20:{x:80,y:80},
+ 21:{x:10,y:90},22:{x:50,y:90},23:{x:90,y:90}
 };
 
+// 인접 리스트 (여기 적힌 쌍만 선으로 그리고, 이동도 이 경로만 가능)
+const adj = {
+  0:[1,9],
+  1:[0,2,4],
+  2:[1,14],
+  3:[4,10],
+  4:[1,3,5,7],
+  5:[4,13],
+  6:[7,11],
+  7:[4,6,8],
+  8:[7,12],
+  9:[0,10,21],
+ 10:[3,9,11,18],
+ 11:[6,10,15],
+ 12:[8,13,17],
+ 13:[5,12,14,20],
+ 14:[2,13,23],
+ 15:[11,16],
+ 16:[15,17,19],
+ 17:[12,16],
+ 18:[10,19],
+ 19:[16,18,20,22],
+ 20:[13,19],
+ 21:[9,22],
+ 22:[19,21,23],
+ 23:[14,22]
+};
+
+// 밀(3개 일직선) 패턴들
 const mills = [
   [0,1,2],[3,4,5],[6,7,8],
   [15,16,17],[18,19,20],[21,22,23],
@@ -239,266 +239,261 @@ const mills = [
   [1,4,7],[16,19,22]
 ];
 
-function hasMill(index, side) {
-  for (const m of mills) {
-    if (m.includes(index) && m.every(i => board[i] === side)) return true;
+const otherSide = s => s===WHITE?BLACK:WHITE;
+const cellEl = i => document.querySelector(`.cell[data-index="${i}"]`);
+const isPlacingPhase = () => placed.W < MAX_PIECES || placed.B < MAX_PIECES;
+
+// ===== 보드 라인 그리기 (adjacency → SVG 선) =====
+(function drawEdges(){
+  const svg = document.getElementById('edges');
+  const drawn = new Set();
+  for(const [aStr, ns] of Object.entries(adj)){
+    const a = Number(aStr);
+    for(const b of ns){
+      const key = a<b ? `${a}-${b}` : `${b}-${a}`;
+      if(drawn.has(key)) continue;
+      drawn.add(key);
+      const p1 = coord[a], p2 = coord[b];
+      const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+      line.setAttribute('x1', p1.x);
+      line.setAttribute('y1', p1.y);
+      line.setAttribute('x2', p2.x);
+      line.setAttribute('y2', p2.y);
+      svg.appendChild(line);
+    }
+  }
+})();
+
+// ===== 보조 함수들 =====
+function hasMill(idx, side){
+  return mills.some(m => m.includes(idx) && m.every(i => board[i]===side));
+}
+function hasAnyMove(side){
+  if(count[side]<=2) return false;
+  for(let i=0;i<24;i++){
+    if(board[i]!==side) continue;
+    for(const n of adj[i]){
+      if(board[n]===EMPTY) return true;
+    }
   }
   return false;
 }
-
-function enemyPieces(side) {
-  const e = side === WHITE ? BLACK : WHITE;
-  return board.map((v,i)=>({v,i})).filter(o=>o.v===e).map(o=>o.i);
-}
-
-function removePieceAt(i) {
-  board[i] = EMPTY;
-  updateBoardUI();
-}
-
-function placePiece(i, side) {
-  board[i] = side;
-  if (side === WHITE) placedWhite++;
-  else placedBlack++;
-}
-
-function canMoveAnywhere(i, side) {
-  if (remainingPieces(side) === 3) return true;
-  return adj[i].some(n => board[n] === EMPTY);
-}
-
-function remainingPieces(side) {
-  return board.filter(v => v===side).length;
-}
-
-function nextSide(s) { return s===WHITE ? BLACK : WHITE; }
-
-function updateInfoBar() {
-  const modeText = document.querySelector('#mode-text');
-  const turnText = document.querySelector('#turn-text');
-  const roleText = document.querySelector('#role-text');
-
-  if (mode === MODE.SINGLE) {
-    const who = humanSide === WHITE ? '플레이어: 흰 말' : '플레이어: 검은 말';
-    modeText.textContent = `혼자 게임하기 (${who})`;
-  } else {
-    modeText.textContent = `둘이 게임하기`;
-  }
-
-  const whoTurn = currentSide === WHITE ? '흰 말 차례' : '검은 말 차례';
-  turnText.textContent = mode === MODE.SINGLE
-    ? `${whoTurn} (${currentSide===humanSide?'플레이어':'컴퓨터'})`
-    : whoTurn;
-
-  if (gamePhase === 'placing')
-    roleText.textContent = `포석 단계: 번갈아 자신의 말을 빈 점에 놓습니다. (각 9개)`;
-  else
-    roleText.textContent = `이동 단계: 자신의 말을 인접한 칸으로 이동합니다.`;
-}
-
-function updateBoardUI() {
-  document.querySelectorAll('.cell').forEach(cell => {
+function updateBoardUI(){
+  document.querySelectorAll('.cell').forEach(cell=>{
     const idx = Number(cell.dataset.index);
     const v = board[idx];
     cell.classList.remove('empty','W','B','selected');
-    if (v === EMPTY) cell.classList.add('empty');
+    if(v===EMPTY) cell.classList.add('empty');
     else cell.classList.add(v);
   });
 }
+function updateInfoBar(){
+  const modeText = document.getElementById('mode-text');
+  const turnText = document.getElementById('turn-text');
+  const roleText = document.getElementById('role-text');
+  const hintText = document.getElementById('hint-text');
 
-function checkGameOver() {
-  const whiteCount = remainingPieces(WHITE);
-  const blackCount = remainingPieces(BLACK);
-
-  if (whiteCount <= 2) return BLACK;
-  if (blackCount <= 2) return WHITE;
-
-  if (gamePhase === 'moving') {
-    const wMove = board.some((v,i)=>v===WHITE && canMoveAnywhere(i,WHITE));
-    const bMove = board.some((v,i)=>v===BLACK && canMoveAnywhere(i,BLACK));
-    if (!wMove) return BLACK;
-    if (!bMove) return WHITE;
+  if(mode===MODE.SINGLE){
+    const who = humanSide===WHITE ? '플레이어: 흰 말' : '플레이어: 검은 말';
+    modeText.textContent = `혼자 게임하기 (${who})`;
+  }else if(mode===MODE.MULTI){
+    modeText.textContent = '둘이 게임하기';
+  }else{
+    modeText.textContent = '';
   }
-  return null;
+
+  let turn = currentSide===WHITE?'흰 말 차례':'검은 말 차례';
+  if(mode===MODE.SINGLE){
+    turn += currentSide===humanSide?' (플레이어)':' (컴퓨터)';
+  }
+  turnText.textContent = turn;
+
+  if(isPlacingPhase()){
+    roleText.textContent = '포석 단계: 번갈아 자신의 말을 빈 점에 놓습니다. (각 9개)';
+  }else{
+    roleText.textContent = '이동 단계: 자신의 말을 인접한 빈 점으로 한 칸씩 이동합니다.';
+  }
+
+  hintText.textContent = '';
 }
-
-function showResult(winner) {
-  const ov=document.getElementById('result-overlay');
-  const msg=document.getElementById('result-message');
-  const detail=document.getElementById('result-detail');
-  msg.textContent = winner===WHITE ? '흰 말 승리!' : '검은 말 승리!';
-  detail.textContent = '상대방이 2개 이하이거나 더 이상 움직일 수 없습니다.';
-  ov.classList.remove('hidden');
-}
-
-function startSingle() {
-  mode = MODE.SINGLE;
-  resetGame();
-
-  humanSide = Math.random() < 0.5 ? WHITE : BLACK;
-  aiSide = nextSide(humanSide);
-
-  document.getElementById('start-screen').classList.add('hidden');
-  document.getElementById('game-screen').classList.remove('hidden');
-
-  updateInfoBar();
-
-  if (currentSide === aiSide)
-    setTimeout(aiTurn, AI_DELAY);
-}
-
-function startMulti() {
-  mode = MODE.MULTI;
-  resetGame();
-
-  document.getElementById('start-screen').classList.add('hidden');
-  document.getElementById('game-screen').classList.remove('hidden');
-
-  updateInfoBar();
-}
-
-function resetGame() {
+function resetGame(){
   board = Array(24).fill(EMPTY);
   currentSide = WHITE;
-  placedWhite = 0;
-  placedBlack = 0;
-  gamePhase = 'placing';
+  placed = {W:0,B:0};
+  count  = {W:0,B:0};
   selectedIndex = null;
+  gameOver=false;
   updateBoardUI();
   updateInfoBar();
 }
+function endGame(winner){
+  gameOver=true;
+  const ov=document.getElementById('result-overlay');
+  const msg=document.getElementById('result-message');
+  const detail=document.getElementById('result-detail');
+  msg.textContent = winner===WHITE?'흰 말 승리!':'검은 말 승리!';
+  detail.textContent = '상대 말이 2개 이하이거나 더 이상 움직일 수 없습니다.';
+  ov.classList.remove('hidden');
+}
+function checkGameOverAfterMove(side){
+  // 포석 단계에서는 절대 게임 끝나지 않게
+  if(isPlacingPhase()) return;
+  const opp = otherSide(side);
+  if(count[opp]<=2){ endGame(side); return; }
+  if(!hasAnyMove(opp)){ endGame(side); return; }
+}
 
-function handleCellClick(e) {
+// ===== 턴 공통 처리 (밀이면 자동으로 상대 말 하나 제거) =====
+function afterPlacedOrMoved(lastIdx){
+  const side=currentSide;
+  const opp=otherSide(side);
+
+  if(hasMill(lastIdx, side) && count[opp]>0){
+    // 간단 버전: 상대 말 아무거나 하나 자동 제거
+    const candidates=[];
+    for(let i=0;i<24;i++) if(board[i]===opp) candidates.push(i);
+    if(candidates.length){
+      const t = candidates[Math.floor(Math.random()*candidates.length)];
+      board[t]=EMPTY;
+      count[opp]--;
+    }
+  }
+
+  updateBoardUI();
+  checkGameOverAfterMove(side);
+  if(gameOver) return;
+
+  currentSide = opp;
+  updateInfoBar();
+
+  if(mode===MODE.SINGLE && currentSide===aiSide){
+    setTimeout(aiTurn, AI_DELAY);
+  }
+}
+
+// ===== 사람 클릭 처리 =====
+function handleCellClick(e){
+  if(gameOver) return;
   const idx = Number(e.target.dataset.index);
-  const v = board[idx];
+  if(Number.isNaN(idx)) return;
 
-  if (gamePhase === 'placing') {
-    if (v !== EMPTY) return;
-    if (mode===MODE.SINGLE && currentSide!==humanSide) return;
+  if(mode===MODE.SINGLE && currentSide===aiSide) return; // AI 차례엔 입력 막기
 
-    placePiece(idx, currentSide);
-    updateBoardUI();
-
-    if (hasMill(idx, currentSide)) {
-      const list = enemyPieces(currentSide===WHITE?BLACK:WHITE);
-      if (list.length>0) removePieceAt(list[0]);
-    }
-
-    if (placedWhite===MAX_PIECES && placedBlack===MAX_PIECES)
-      gamePhase='moving';
-
-    const w = checkGameOver();
-    if (w) return showResult(w);
-
-    currentSide = nextSide(currentSide);
-    updateInfoBar();
-
-    if (mode===MODE.SINGLE && currentSide===aiSide)
-      setTimeout(aiTurn,AI_DELAY);
-
+  if(isPlacingPhase()){
+    if(board[idx]!==EMPTY) return;
+    // 포석
+    board[idx]=currentSide;
+    placed[currentSide]++;
+    count[currentSide]++;
+    afterPlacedOrMoved(idx);
     return;
   }
 
-  if (gamePhase === 'moving') {
-    if (mode===MODE.SINGLE && currentSide!==humanSide) return;
-
-    if (selectedIndex === null) {
-      if (v !== currentSide) return;
-      selectedIndex = idx;
-      document.querySelector(`.cell[data-index="${idx}"]`).classList.add('selected');
+  // 이동 단계
+  if(selectedIndex===null){
+    if(board[idx]!==currentSide) return;
+    selectedIndex=idx;
+    cellEl(idx).classList.add('selected');
+    return;
+  }else{
+    if(idx===selectedIndex){
+      cellEl(idx).classList.remove('selected');
+      selectedIndex=null;
       return;
     }
-
-    const from = selectedIndex;
-    const to = idx;
-
-    if (board[to]===EMPTY && adj[from].includes(to)) {
-      board[from]=EMPTY;
-      board[to]=currentSide;
-      selectedIndex=null;
-      updateBoardUI();
-
-      if (hasMill(to, currentSide)) {
-        const list = enemyPieces(currentSide===WHITE?BLACK:WHITE);
-        if (list.length>0) removePieceAt(list[0]);
+    if(board[idx]!==EMPTY){
+      // 자기 말 다른 거 선택
+      if(board[idx]===currentSide){
+        cellEl(selectedIndex).classList.remove('selected');
+        selectedIndex=idx;
+        cellEl(idx).classList.add('selected');
       }
-
-      const w = checkGameOver();
-      if (w) return showResult(w);
-
-      currentSide = nextSide(currentSide);
-      updateInfoBar();
-
-      if (mode===MODE.SINGLE && currentSide===aiSide)
-        setTimeout(aiTurn,AI_DELAY);
-
-    } else {
-      document.querySelector(`.cell[data-index="${from}"]`).classList.remove('selected');
-      selectedIndex=null;
+      return;
     }
+    const from=selectedIndex, to=idx;
+    if(!adj[from].includes(to)) return;
+
+    // 실제 이동
+    board[from]=EMPTY;
+    board[to]=currentSide;
+    cellEl(from).classList.remove('selected');
+    selectedIndex=null;
+    afterPlacedOrMoved(to);
   }
 }
 
-function aiTurn() {
-  if (gamePhase==='placing') {
-    const empties = board.map((v,i)=>(v===EMPTY?i:null)).filter(v=>v!==null);
-    if (!empties.length) return;
-    const i = empties[Math.floor(Math.random()*empties.length)];
-    placePiece(i,aiSide);
-    updateBoardUI();
+// ===== AI =====
+function aiTurn(){
+  if(gameOver) return;
+  if(currentSide!==aiSide) return;
 
-    if (hasMill(i,aiSide)) {
-      const list = enemyPieces(humanSide);
-      if (list.length>0) removePieceAt(list[0]);
+  if(isPlacingPhase()){
+    // 간단한 전략: 밀 만들 수 있으면 거기로, 아니면 랜덤
+    const empties=[];
+    for(let i=0;i<24;i++) if(board[i]===EMPTY) empties.push(i);
+    let choice=null;
+    for(const i of empties){
+      board[i]=aiSide;
+      const ok = hasMill(i,aiSide);
+      board[i]=EMPTY;
+      if(ok){ choice=i; break; }
     }
-
-    if (placedWhite===MAX_PIECES && placedBlack===MAX_PIECES)
-      gamePhase='moving';
-
-    const w = checkGameOver();
-    if (w) return showResult(w);
-
-    currentSide = humanSide;
-    updateInfoBar();
+    if(choice===null){
+      choice = empties[Math.floor(Math.random()*empties.length)];
+    }
+    board[choice]=aiSide;
+    placed[aiSide]++; count[aiSide]++;
+    afterPlacedOrMoved(choice);
     return;
   }
 
-  if (gamePhase==='moving') {
-    const movables = board
-      .map((v,i)=>({v,i}))
-      .filter(o=>o.v===aiSide && canMoveAnywhere(o.i,aiSide));
-    if (!movables.length) {
-      const w = checkGameOver();
-      if (w) showResult(w);
-      return;
+  // 이동 단계: 가능한 이동 중 밀 만드는 수가 있으면 우선, 아니면 랜덤
+  const moves=[];
+  for(let from=0;from<24;from++){
+    if(board[from]!==aiSide) continue;
+    for(const to of adj[from]){
+      if(board[to]===EMPTY) moves.push({from,to});
     }
-    const from = movables[Math.floor(Math.random()*movables.length)].i;
-    const targets = adj[from].filter(n=>board[n]===EMPTY);
-    const to = targets[Math.floor(Math.random()*targets.length)];
-
-    board[from]=EMPTY;
-    board[to]=aiSide;
-    updateBoardUI();
-
-    if (hasMill(to,aiSide)) {
-      const list = enemyPieces(humanSide);
-      if (list.length>0) removePieceAt(list[0]);
-    }
-
-    const w = checkGameOver();
-    if (w) return showResult(w);
-
-    currentSide = humanSide;
-    updateInfoBar();
   }
+  if(!moves.length){ checkGameOverAfterMove(aiSide); return; }
+
+  let best=null;
+  for(const m of moves){
+    board[m.from]=EMPTY; board[m.to]=aiSide;
+    const ok=hasMill(m.to,aiSide);
+    board[m.to]=EMPTY; board[m.from]=aiSide;
+    if(ok){ best=m; break; }
+  }
+  const chosen = best || moves[Math.floor(Math.random()*moves.length)];
+  board[chosen.from]=EMPTY;
+  board[chosen.to]=aiSide;
+  afterPlacedOrMoved(chosen.to);
 }
 
+// ===== 화면 전환 및 버튼 =====
 document.querySelectorAll('.cell').forEach(c=>{
   c.addEventListener('click',handleCellClick);
 });
 
-document.getElementById('btn-single').onclick=startSingle;
-document.getElementById('btn-multi').onclick=startMulti;
+document.getElementById('btn-single').onclick=()=>{
+  mode=MODE.SINGLE;
+  resetGame();
+  humanSide = Math.random()<0.5 ? WHITE : BLACK;
+  aiSide = otherSide(humanSide);
+  document.getElementById('start-screen').classList.add('hidden');
+  document.getElementById('game-screen').classList.remove('hidden');
+  updateInfoBar();
+  if(currentSide===aiSide) setTimeout(aiTurn,AI_DELAY);
+};
+
+document.getElementById('btn-multi').onclick=()=>{
+  mode=MODE.MULTI;
+  resetGame();
+  humanSide=null; aiSide=null;
+  document.getElementById('start-screen').classList.add('hidden');
+  document.getElementById('game-screen').classList.remove('hidden');
+  updateInfoBar();
+};
 
 document.getElementById('btn-back').onclick=()=>{
   document.getElementById('game-screen').classList.add('hidden');
@@ -507,9 +502,15 @@ document.getElementById('btn-back').onclick=()=>{
 
 document.getElementById('btn-restart').onclick=()=>{
   document.getElementById('result-overlay').classList.add('hidden');
-  if (mode===MODE.SINGLE) startSingle();
-  else startMulti();
+  if(mode===MODE.SINGLE){
+    document.getElementById('game-screen').classList.add('hidden');
+    document.getElementById('start-screen').classList.remove('hidden');
+  }else{
+    resetGame();
+    document.getElementById('result-overlay').classList.add('hidden');
+  }
 };
+
 document.getElementById('btn-to-start').onclick=()=>{
   document.getElementById('result-overlay').classList.add('hidden');
   document.getElementById('game-screen').classList.add('hidden');
