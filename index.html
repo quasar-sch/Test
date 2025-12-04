@@ -12,7 +12,6 @@
   --white-border:#b45309;
   --black-piece:#020617;
   --black-border:#e5e7eb;
-  --highlight:#3b82f6;
 }
 *{box-sizing:border-box;}
 
@@ -60,6 +59,7 @@ button:hover{
   box-shadow:0 12px 40px rgba(0,0,0,0.22);
 }
 
+/* 세 겹 네모 */
 .square{
   position:absolute;
   border:2px solid var(--line);
@@ -68,6 +68,24 @@ button:hover{
 .square.outer{top:10%;left:10%;right:10%;bottom:10%;}
 .square.middle{top:20%;left:20%;right:20%;bottom:20%;}
 .square.inner{top:30%;left:30%;right:30%;bottom:30%;}
+
+/* 십자가: 가장 안쪽 사각형 안쪽은 비워두고, 바깥 부분만 선 */
+.cross-line{
+  position:absolute;
+  background:var(--line);
+  pointer-events:none;
+  z-index:0;
+}
+.cross-v{width:2px;}
+.cross-h{height:2px;}
+/* 위쪽 세그먼트: 위쪽 외곽 → 안쪽 사각형 위쪽까지 */
+.cross-v-top{left:50%; top:10%; height:20%; margin-left:-1px;}
+/* 아래 세그먼트: 안쪽 사각형 아래쪽 → 아래 외곽까지 */
+.cross-v-bottom{left:50%; top:70%; height:20%; margin-left:-1px;}
+/* 왼쪽 세그먼트: 왼 외곽 → 안쪽 사각형 왼쪽까지 */
+.cross-h-left{top:50%; left:10%; width:20%; margin-top:-1px;}
+/* 오른쪽 세그먼트: 안쪽 사각형 오른쪽 → 오른 외곽까지 */
+.cross-h-right{top:50%; left:70%; width:20%; margin-top:-1px;}
 
 .cell{
   width:24px;height:24px;border-radius:50%;
@@ -125,6 +143,12 @@ button:hover{
       <div class="square middle"></div>
       <div class="square inner"></div>
 
+      <!-- 십자가 네 조각 (안쪽 네모는 비워둠) -->
+      <div class="cross-line cross-v cross-v-top"></div>
+      <div class="cross-line cross-v cross-v-bottom"></div>
+      <div class="cross-line cross-h cross-h-left"></div>
+      <div class="cross-line cross-h cross-h-right"></div>
+
       <!-- 바깥 8 -->
       <div class="cell empty" data-index="0"  style="left:10%; top:10%;"></div>
       <div class="cell empty" data-index="1"  style="left:50%; top:10%;"></div>
@@ -174,10 +198,6 @@ button:hover{
 </div>
 
 <script>
-/*  
-  ===== Nine Men's Morris FULL SCRIPT =====
-  AI + 규칙 + 이동 + 포석 + 밀 체크 + 결과창
-*/
 const MODE = { SINGLE:'single', MULTI:'multi' };
 let mode = null;
 
@@ -197,6 +217,8 @@ const MAX_PIECES = 9;
 
 let selectedIndex = null;
 let gamePhase = 'placing';
+
+const AI_DELAY = 500; // 이전 1000ms → 절반으로 줄임
 
 const adj = {
   0:[1,9],       1:[0,2,4],        2:[1,14],
@@ -249,9 +271,7 @@ function remainingPieces(side) {
   return board.filter(v => v===side).length;
 }
 
-function nextSide(s) {
-  return s===WHITE ? BLACK : WHITE;
-}
+function nextSide(s) { return s===WHITE ? BLACK : WHITE; }
 
 function updateInfoBar() {
   const modeText = document.querySelector('#mode-text');
@@ -259,18 +279,21 @@ function updateInfoBar() {
   const roleText = document.querySelector('#role-text');
 
   if (mode === MODE.SINGLE) {
-    const who = humanSide === WHITE ? '플레이어(흰)' : '플레이어(검)';
-    modeText.textContent = `혼자 게임하기: ${who}`;
+    const who = humanSide === WHITE ? '플레이어: 흰 말' : '플레이어: 검은 말';
+    modeText.textContent = `혼자 게임하기 (${who})`;
   } else {
     modeText.textContent = `둘이 게임하기`;
   }
 
-  turnText.textContent = currentSide === WHITE ? '흰 말 차례' : '검은 말 차례';
+  const whoTurn = currentSide === WHITE ? '흰 말 차례' : '검은 말 차례';
+  turnText.textContent = mode === MODE.SINGLE
+    ? `${whoTurn} (${currentSide===humanSide?'플레이어':'컴퓨터'})`
+    : whoTurn;
 
   if (gamePhase === 'placing')
-    roleText.textContent = `포석 단계: 번갈아 9개씩 말 놓기`;
+    roleText.textContent = `포석 단계: 번갈아 자신의 말을 빈 점에 놓습니다. (각 9개)`;
   else
-    roleText.textContent = `이동 단계: 인접한 칸으로 이동`;
+    roleText.textContent = `이동 단계: 자신의 말을 인접한 칸으로 이동합니다.`;
 }
 
 function updateBoardUI() {
@@ -291,16 +314,11 @@ function checkGameOver() {
   if (blackCount <= 2) return WHITE;
 
   if (gamePhase === 'moving') {
-    let wMove = board
-      .map((v,i)=>(v===WHITE && canMoveAnywhere(i,WHITE)))
-      .some(v=>v);
-    let bMove = board
-      .map((v,i)=>(v===BLACK && canMoveAnywhere(i,BLACK)))
-      .some(v=>v);
+    const wMove = board.some((v,i)=>v===WHITE && canMoveAnywhere(i,WHITE));
+    const bMove = board.some((v,i)=>v===BLACK && canMoveAnywhere(i,BLACK));
     if (!wMove) return BLACK;
     if (!bMove) return WHITE;
   }
-
   return null;
 }
 
@@ -308,8 +326,8 @@ function showResult(winner) {
   const ov=document.getElementById('result-overlay');
   const msg=document.getElementById('result-message');
   const detail=document.getElementById('result-detail');
-  msg.textContent = winner===WHITE ? '흰 말 승!' : '검은 말 승!';
-  detail.textContent = '상대방이 2개 이하이거나 이동 불가 상태가 되었습니다.';
+  msg.textContent = winner===WHITE ? '흰 말 승리!' : '검은 말 승리!';
+  detail.textContent = '상대방이 2개 이하이거나 더 이상 움직일 수 없습니다.';
   ov.classList.remove('hidden');
 }
 
@@ -326,7 +344,7 @@ function startSingle() {
   updateInfoBar();
 
   if (currentSide === aiSide)
-    setTimeout(aiTurn, 1000);
+    setTimeout(aiTurn, AI_DELAY);
 }
 
 function startMulti() {
@@ -356,27 +374,27 @@ function handleCellClick(e) {
 
   if (gamePhase === 'placing') {
     if (v !== EMPTY) return;
-
     if (mode===MODE.SINGLE && currentSide!==humanSide) return;
 
     placePiece(idx, currentSide);
     updateBoardUI();
 
     if (hasMill(idx, currentSide)) {
-      let list = enemyPieces(currentSide===WHITE?BLACK:WHITE);
-      removePieceAt(list[0]);
+      const list = enemyPieces(currentSide===WHITE?BLACK:WHITE);
+      if (list.length>0) removePieceAt(list[0]);
     }
 
-    if (placedWhite===9 && placedBlack===9) gamePhase='moving';
+    if (placedWhite===MAX_PIECES && placedBlack===MAX_PIECES)
+      gamePhase='moving';
 
-    let w = checkGameOver();
+    const w = checkGameOver();
     if (w) return showResult(w);
 
     currentSide = nextSide(currentSide);
     updateInfoBar();
 
     if (mode===MODE.SINGLE && currentSide===aiSide)
-      setTimeout(aiTurn,1000);
+      setTimeout(aiTurn,AI_DELAY);
 
     return;
   }
@@ -401,18 +419,18 @@ function handleCellClick(e) {
       updateBoardUI();
 
       if (hasMill(to, currentSide)) {
-        let list = enemyPieces(currentSide===WHITE?BLACK:WHITE);
-        removePieceAt(list[0]);
+        const list = enemyPieces(currentSide===WHITE?BLACK:WHITE);
+        if (list.length>0) removePieceAt(list[0]);
       }
 
-      let w = checkGameOver();
+      const w = checkGameOver();
       if (w) return showResult(w);
 
       currentSide = nextSide(currentSide);
       updateInfoBar();
 
       if (mode===MODE.SINGLE && currentSide===aiSide)
-        setTimeout(aiTurn,1000);
+        setTimeout(aiTurn,AI_DELAY);
 
     } else {
       document.querySelector(`.cell[data-index="${from}"]`).classList.remove('selected');
@@ -422,21 +440,22 @@ function handleCellClick(e) {
 }
 
 function aiTurn() {
-  let empty = board.map((v,i)=>(v===EMPTY?i:null)).filter(v=>v!==null);
-
   if (gamePhase==='placing') {
-    let i = empty[Math.floor(Math.random()*empty.length)];
+    const empties = board.map((v,i)=>(v===EMPTY?i:null)).filter(v=>v!==null);
+    if (!empties.length) return;
+    const i = empties[Math.floor(Math.random()*empties.length)];
     placePiece(i,aiSide);
     updateBoardUI();
 
     if (hasMill(i,aiSide)) {
-      let list = enemyPieces(humanSide);
-      removePieceAt(list[0]);
+      const list = enemyPieces(humanSide);
+      if (list.length>0) removePieceAt(list[0]);
     }
 
-    if (placedWhite===9 && placedBlack===9) gamePhase='moving';
+    if (placedWhite===MAX_PIECES && placedBlack===MAX_PIECES)
+      gamePhase='moving';
 
-    let w = checkGameOver();
+    const w = checkGameOver();
     if (w) return showResult(w);
 
     currentSide = humanSide;
@@ -445,24 +464,28 @@ function aiTurn() {
   }
 
   if (gamePhase==='moving') {
-    let movables = board
+    const movables = board
       .map((v,i)=>({v,i}))
       .filter(o=>o.v===aiSide && canMoveAnywhere(o.i,aiSide));
-
-    let from = movables[Math.floor(Math.random()*movables.length)].i;
-    let targets = adj[from].filter(n=>board[n]===EMPTY);
-    let to = targets[Math.floor(Math.random()*targets.length)];
+    if (!movables.length) {
+      const w = checkGameOver();
+      if (w) showResult(w);
+      return;
+    }
+    const from = movables[Math.floor(Math.random()*movables.length)].i;
+    const targets = adj[from].filter(n=>board[n]===EMPTY);
+    const to = targets[Math.floor(Math.random()*targets.length)];
 
     board[from]=EMPTY;
     board[to]=aiSide;
     updateBoardUI();
 
     if (hasMill(to,aiSide)) {
-      let list = enemyPieces(humanSide);
-      removePieceAt(list[0]);
+      const list = enemyPieces(humanSide);
+      if (list.length>0) removePieceAt(list[0]);
     }
 
-    let w = checkGameOver();
+    const w = checkGameOver();
     if (w) return showResult(w);
 
     currentSide = humanSide;
