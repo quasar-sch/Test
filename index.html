@@ -1,789 +1,498 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <title>Nine Men's Morris</title>
-  <style>
-    :root{
-      --board-bg:#d1d5db;
-      --board-edge:#4b5563;
-      --line:#4b5563;
-      --white-piece:#fef3c7;
-      --white-border:#b45309;
-      --black-piece:#020617;
-      --black-border:#e5e7eb;
-      --highlight:#3b82f6;
-    }
+<meta charset="UTF-8" />
+<title>Nine Men's Morris</title>
+<style>
+:root{
+  --board-bg:#d1d5db;
+  --board-edge:#4b5563;
+  --line:#4b5563;
+  --white-piece:#fef3c7;
+  --white-border:#b45309;
+  --black-piece:#020617;
+  --black-border:#e5e7eb;
+  --highlight:#3b82f6;
+}
+*{box-sizing:border-box;}
 
-    *{box-sizing:border-box;}
+body{
+  margin:0;
+  padding:40px 16px;
+  background:#f3f4f6;
+  font-family:ui-sans-serif,system-ui,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",Segoe UI,Roboto,Helvetica,Arial;
+  text-align:center;
+}
 
-    body {
-      font-family: ui-sans-serif, system-ui, -apple-system, "Apple SD Gothic Neo",
-        "Noto Sans KR", Segoe UI, Roboto, Helvetica, Arial;
-      text-align: center;
-      background: #f3f4f6;
-      margin: 0;
-      padding: 40px 16px;
-    }
-    h1 {
-      margin-top: 0;
-      margin-bottom: 16px;
-    }
-    #start-screen,
-    #game-screen {
-      max-width: 640px;
-      margin: 0 auto;
-    }
-    .hidden {
-      display: none;
-    }
-    button {
-      padding: 10px 16px;
-      margin: 6px;
-      font-size: 15px;
-      cursor: pointer;
-      border-radius: 8px;
-      border: 1px solid #4b5563;
-      background: #ffffff;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
-      transition: 0.15s transform, 0.15s box-shadow, 0.15s background;
-    }
-    button:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
-      background: #f9fafb;
-    }
+button{
+  padding:10px 16px;
+  margin:6px;
+  font-size:15px;
+  cursor:pointer;
+  border-radius:8px;
+  border:1px solid #4b5563;
+  background:#fff;
+  transition:0.15s;
+}
+button:hover{
+  transform:translateY(-1px);
+  background:#f9fafb;
+  box-shadow:0 4px 10px rgba(0,0,0,0.12);
+}
 
-    #info-bar {
-      margin-bottom: 8px;
-      font-size: 15px;
-    }
-    #info-bar > div {
-      margin: 2px 0;
-    }
-    #role-text{
-      font-size:13px;
-      color:#4b5563;
-      margin-bottom:8px;
-      min-height:18px;
-    }
+.hidden{display:none;}
 
-    #board-wrapper {
-      display: flex;
-      justify-content: center;
-    }
-    #board {
-      width: 400px;
-      max-width: 90vw;
-      aspect-ratio: 1 / 1;
-      position: relative;
-      border-radius: 24px;
-      background: radial-gradient(circle at 20% -10%, #e5e7eb, var(--board-bg));
-      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
-      border: 3px solid var(--board-edge);
-      overflow: hidden;
-    }
+#game-screen,#start-screen{
+  max-width:640px;
+  margin:0 auto;
+}
 
-    /* 세 개의 정사각형 (중앙 십자가 선 없음) */
-    .square{
-      position:absolute;
-      border:2px solid var(--line);
-      pointer-events:none;
-      z-index:0;
-      background:transparent;
-    }
-    .square.outer { top:10%; left:10%; right:10%; bottom:10%; }
-    .square.middle{ top:20%; left:20%; right:20%; bottom:20%; }
-    .square.inner { top:30%; left:30%; right:30%; bottom:30%; }
+#board-wrapper{display:flex;justify-content:center;}
 
-    .cell {
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      position: absolute;
-      transform: translate(-50%, -50%);
-      box-sizing: border-box;
-      z-index: 1;
-      cursor:pointer;
-    }
-    .cell.empty {
-      background-color: #e5e7eb;
-      border: 2px solid var(--board-edge);
-    }
-    .cell.W {
-      background-color: var(--white-piece);
-      border: 3px solid var(--white-border);
-      box-shadow: 0 0 0 2px rgba(255,255,255,0.7);
-    }
-    .cell.B {
-      background-color: var(--black-piece);
-      border: 3px solid var(--black-border);
-      box-shadow: 0 0 0 2px rgba(0,0,0,0.5);
-    }
-    .cell.selected {
-      box-shadow: 0 0 0 4px rgba(59,130,246,0.9);
-    }
+#board{
+  width:400px;
+  max-width:90vw;
+  aspect-ratio:1/1;
+  position:relative;
+  border-radius:24px;
+  background:radial-gradient(circle at 20% -10%,#e5e7eb,var(--board-bg));
+  border:3px solid var(--board-edge);
+  box-shadow:0 12px 40px rgba(0,0,0,0.22);
+}
 
-    #hint-text {
-      margin-top: 10px;
-      font-size: 13px;
-      color: #4b5563;
-      min-height: 20px;
-    }
+.square{
+  position:absolute;
+  border:2px solid var(--line);
+  pointer-events:none;
+}
+.square.outer{top:10%;left:10%;right:10%;bottom:10%;}
+.square.middle{top:20%;left:20%;right:20%;bottom:20%;}
+.square.inner{top:30%;left:30%;right:30%;bottom:30%;}
 
-    /* 결과 오버레이 */
-    #result-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(15, 23, 42, 0.55);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 999;
-    }
-    #result-overlay.hidden {
-      display: none;
-    }
-    #result-box {
-      background: #111827;
-      color: #f9fafb;
-      padding: 20px 24px;
-      border-radius: 16px;
-      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
-      min-width: 260px;
-      max-width: 90vw;
-      text-align: center;
-      border: 1px solid #4b5563;
-    }
-    #result-message {
-      font-size: 22px;
-      margin-bottom: 10px;
-    }
-    #result-box p {
-      margin: 4px 0 14px;
-      font-size: 13px;
-      color: #e5e7eb;
-    }
-  </style>
+.cell{
+  width:24px;height:24px;border-radius:50%;
+  position:absolute;transform:translate(-50%,-50%);
+  cursor:pointer;z-index:1;
+}
+.cell.empty{background:#e5e7eb;border:2px solid var(--board-edge);}
+.cell.W{
+  background:var(--white-piece);border:3px solid var(--white-border);
+  box-shadow:0 0 0 2px rgba(255,255,255,0.7);
+}
+.cell.B{
+  background:var(--black-piece);border:3px solid var(--black-border);
+  box-shadow:0 0 0 2px rgba(0,0,0,0.5);
+}
+.cell.selected{box-shadow:0 0 0 4px rgba(59,130,246,0.9);}
+
+#result-overlay{
+  position:fixed;inset:0;
+  background:rgba(15,23,42,0.55);
+  display:flex;align-items:center;justify-content:center;
+  z-index:1000;
+}
+#result-overlay.hidden{display:none;}
+#result-box{
+  background:#111827;color:#f9fafb;
+  padding:20px;border-radius:16px;
+  border:1px solid #4b5563;
+  min-width:260px;
+}
+</style>
 </head>
+
 <body>
-  <!-- 시작 화면 -->
-  <div id="start-screen">
-    <h1>Nine Men's Morris</h1>
-    <p>혼자 게임하기: 플레이어 vs 컴퓨터 (선/후공 랜덤)</p>
-    <p>둘이 게임하기: 같은 컴퓨터에서 번갈아 두기</p>
-    <button id="btn-single">혼자 게임하기</button>
-    <button id="btn-multi">둘이 게임하기</button>
-  </div>
 
-  <!-- 게임 화면 -->
-  <div id="game-screen" class="hidden">
-    <div id="info-bar">
-      <div id="mode-text"></div>
-      <div id="turn-text"></div>
-    </div>
-    <div id="role-text"></div>
+<!-- 시작 화면 -->
+<div id="start-screen">
+  <h1>Nine Men's Morris</h1>
+  <p>혼자 게임하기: 플레이어 vs 컴퓨터 (선/후공 랜덤)</p>
+  <p>둘이 게임하기: 같은 컴퓨터에서 번갈아 두기</p>
+  <button id="btn-single">혼자 게임하기</button>
+  <button id="btn-multi">둘이 게임하기</button>
+</div>
 
-    <div id="board-wrapper">
-      <div id="board">
-        <!-- 세 개의 정사각형 -->
-        <div class="square outer"></div>
-        <div class="square middle"></div>
-        <div class="square inner"></div>
+<!-- 게임 화면 -->
+<div id="game-screen" class="hidden">
+  <div id="mode-text"></div>
+  <div id="turn-text"></div>
+  <div id="role-text" style="font-size:13px;color:#4b5563;margin-bottom:8px;"></div>
 
-        <!-- 바깥 8개 -->
-        <div class="cell empty" data-index="0"  style="left:10%; top:10%;"></div>
-        <div class="cell empty" data-index="1"  style="left:50%; top:10%;"></div>
-        <div class="cell empty" data-index="2"  style="left:90%; top:10%;"></div>
+  <div id="board-wrapper">
+    <div id="board">
 
-        <div class="cell empty" data-index="9"  style="left:10%; top:50%;"></div>
-        <div class="cell empty" data-index="14" style="left:90%; top:50%;"></div>
+      <div class="square outer"></div>
+      <div class="square middle"></div>
+      <div class="square inner"></div>
 
-        <div class="cell empty" data-index="21" style="left:10%; top:90%;"></div>
-        <div class="cell empty" data-index="22" style="left:50%; top:90%;"></div>
-        <div class="cell empty" data-index="23" style="left:90%; top:90%;"></div>
+      <!-- 바깥 8 -->
+      <div class="cell empty" data-index="0"  style="left:10%; top:10%;"></div>
+      <div class="cell empty" data-index="1"  style="left:50%; top:10%;"></div>
+      <div class="cell empty" data-index="2"  style="left:90%; top:10%;"></div>
+      <div class="cell empty" data-index="9"  style="left:10%; top:50%;"></div>
+      <div class="cell empty" data-index="14" style="left:90%; top:50%;"></div>
+      <div class="cell empty" data-index="21" style="left:10%; top:90%;"></div>
+      <div class="cell empty" data-index="22" style="left:50%; top:90%;"></div>
+      <div class="cell empty" data-index="23" style="left:90%; top:90%;"></div>
 
-        <!-- 중간 8개 -->
-        <div class="cell empty" data-index="3"  style="left:20%; top:20%;"></div>
-        <div class="cell empty" data-index="4"  style="left:50%; top:20%;"></div>
-        <div class="cell empty" data-index="5"  style="left:80%; top:20%;"></div>
+      <!-- 중간 8 -->
+      <div class="cell empty" data-index="3"  style="left:20%; top:20%;"></div>
+      <div class="cell empty" data-index="4"  style="left:50%; top:20%;"></div>
+      <div class="cell empty" data-index="5"  style="left:80%; top:20%;"></div>
+      <div class="cell empty" data-index="10" style="left:20%; top:50%;"></div>
+      <div class="cell empty" data-index="13" style="left:80%; top:50%;"></div>
+      <div class="cell empty" data-index="18" style="left:20%; top:80%;"></div>
+      <div class="cell empty" data-index="19" style="left:50%; top:80%;"></div>
+      <div class="cell empty" data-index="20" style="left:80%; top:80%;"></div>
 
-        <div class="cell empty" data-index="10" style="left:20%; top:50%;"></div>
-        <div class="cell empty" data-index="13" style="left:80%; top:50%;"></div>
+      <!-- 안쪽 8 -->
+      <div class="cell empty" data-index="6"  style="left:30%; top:30%;"></div>
+      <div class="cell empty" data-index="7"  style="left:50%; top:30%;"></div>
+      <div class="cell empty" data-index="8"  style="left:70%; top:30%;"></div>
+      <div class="cell empty" data-index="11" style="left:30%; top:50%;"></div>
+      <div class="cell empty" data-index="12" style="left:70%; top:50%;"></div>
+      <div class="cell empty" data-index="15" style="left:30%; top:70%;"></div>
+      <div class="cell empty" data-index="16" style="left:50%; top:70%;"></div>
+      <div class="cell empty" data-index="17" style="left:70%; top:70%;"></div>
 
-        <div class="cell empty" data-index="18" style="left:20%; top:80%;"></div>
-        <div class="cell empty" data-index="19" style="left:50%; top:80%;"></div>
-        <div class="cell empty" data-index="20" style="left:80%; top:80%;"></div>
-
-        <!-- 안쪽 8개 -->
-        <div class="cell empty" data-index="6"  style="left:30%; top:30%;"></div>
-        <div class="cell empty" data-index="7"  style="left:50%; top:30%;"></div>
-        <div class="cell empty" data-index="8"  style="left:70%; top:30%;"></div>
-
-        <div class="cell empty" data-index="11" style="left:30%; top:50%;"></div>
-        <div class="cell empty" data-index="12" style="left:70%; top:50%;"></div>
-
-        <div class="cell empty" data-index="15" style="left:30%; top:70%;"></div>
-        <div class="cell empty" data-index="16" style="left:50%; top:70%;"></div>
-        <div class="cell empty" data-index="17" style="left:70%; top:70%;"></div>
-      </div>
-    </div>
-
-    <div id="hint-text"></div>
-
-    <div style="margin-top:14px;">
-      <button id="btn-back">처음으로</button>
     </div>
   </div>
 
-  <!-- 결과 오버레이 -->
-  <div id="result-overlay" class="hidden">
-    <div id="result-box">
-      <div id="result-message"></div>
-      <p id="result-detail"></p>
-      <button id="btn-restart">같은 모드로 다시 하기</button>
-      <button id="btn-to-start">처음 화면으로</button>
-    </div>
+  <div id="hint-text"></div>
+
+  <button id="btn-back">처음으로</button>
+</div>
+
+<!-- 결과화면 -->
+<div id="result-overlay" class="hidden">
+  <div id="result-box">
+    <div id="result-message" style="font-size:22px;margin-bottom:8px;"></div>
+    <div id="result-detail" style="font-size:13px;color:#e5e7eb;margin-bottom:16px;"></div>
+    <button id="btn-restart">같은 모드로 다시 하기</button>
+    <button id="btn-to-start">처음 화면으로</button>
   </div>
+</div>
 
-  <script>
-    const MODE = { SINGLE:'single', MULTI:'multi' };
-    const EMPTY = null, WHITE='W', BLACK='B';
+<script>
+/*  
+  ===== Nine Men's Morris FULL SCRIPT =====
+  AI + 규칙 + 이동 + 포석 + 밀 체크 + 결과창
+*/
+const MODE = { SINGLE:'single', MULTI:'multi' };
+let mode = null;
 
-    // AI 딜레이
-    const AI_DELAY = 3000;       // 플레이어 턴 끝나고 AI가 두기까지
-    const AI_CHAIN_DELAY = 800;  // AI가 밀 만든 뒤 말 제거할 때
+const EMPTY = null;
+const WHITE = 'W';
+const BLACK = 'B';
 
-    let mode = null;
-    let board = Array(24).fill(EMPTY);
-    let currentSide = WHITE;
-    let piecesToPlace = { W:9, B:9 };
-    let pieceCount   = { W:0, B:0 };
+let board = Array(24).fill(null);
 
-    let humanSide = null, aiSide = null;
-    let gameOver = false;
-    let mustRemoveSide = null;
-    let selectedIndex = null;
+let currentSide = WHITE;
+let humanSide = null;
+let aiSide = null;
 
-    const startScreen = document.getElementById('start-screen');
-    const gameScreen  = document.getElementById('game-screen');
-    const resultOverlay = document.getElementById('result-overlay');
-    const resultMessage = document.getElementById('result-message');
-    const resultDetail  = document.getElementById('result-detail');
-    const modeText  = document.getElementById('mode-text');
-    const turnText  = document.getElementById('turn-text');
-    const roleText  = document.getElementById('role-text');
-    const hintText  = document.getElementById('hint-text');
-    const boardEl   = document.getElementById('board');
+let placedWhite = 0;
+let placedBlack = 0;
+const MAX_PIECES = 9;
 
-    const neighbors = {
-      0:[1,9],
-      1:[0,2,4],
-      2:[1,14],
-      3:[4,10],
-      4:[1,3,5,7],
-      5:[4,13],
-      6:[7,11],
-      7:[4,6,8],
-      8:[7,12],
-      9:[0,10,21],
-      10:[3,9,11,18],
-      11:[6,10,15],
-      12:[8,13,17],
-      13:[5,12,14,20],
-      14:[2,13,23],
-      15:[11,16],
-      16:[15,17,19],
-      17:[12,16],
-      18:[10,19],
-      19:[16,18,20,22],
-      20:[13,19],
-      21:[9,22],
-      22:[19,21,23],
-      23:[14,22]
-    };
+let selectedIndex = null;
+let gamePhase = 'placing';
 
-    const mills = [
-      [0,1,2],[3,4,5],[6,7,8],[9,10,11],
-      [12,13,14],[15,16,17],[18,19,20],[21,22,23],
-      [0,9,21],[3,10,18],[6,11,15],
-      [1,4,7],[16,19,22],
-      [8,12,17],[5,13,20],[2,14,23]
-    ];
+const adj = {
+  0:[1,9],       1:[0,2,4],        2:[1,14],
+  3:[4,10],      4:[1,3,5,7],      5:[4,13],
+  6:[7,11],      7:[4,6,8],        8:[7,12],
+  9:[0,10,21],   10:[3,9,11,18],   11:[6,10,15],
+  12:[8,13,17],  13:[5,12,14,20],  14:[2,13,23],
+  15:[11,16],    16:[15,17,19],    17:[12,16],
+  18:[10,19],    19:[16,18,20,22], 20:[13,19],
+  21:[9,22],     22:[19,21,23],    23:[14,22]
+};
 
-    const otherSide = s => s===WHITE?BLACK:WHITE;
-    const cellEl = i => boardEl.querySelector('.cell[data-index="'+i+'"]');
+const mills = [
+  [0,1,2],[3,4,5],[6,7,8],
+  [15,16,17],[18,19,20],[21,22,23],
+  [0,9,21],[3,10,18],[6,11,15],
+  [8,12,17],[5,13,20],[2,14,23],
+  [1,4,7],[16,19,22]
+];
 
-    function clearSelection(){
-      if(selectedIndex!==null) cellEl(selectedIndex)?.classList.remove('selected');
+function hasMill(index, side) {
+  for (const m of mills) {
+    if (m.includes(index) && m.every(i => board[i] === side)) return true;
+  }
+  return false;
+}
+
+function enemyPieces(side) {
+  const e = side === WHITE ? BLACK : WHITE;
+  return board.map((v,i)=>({v,i})).filter(o=>o.v===e).map(o=>o.i);
+}
+
+function removePieceAt(i) {
+  board[i] = EMPTY;
+  updateBoardUI();
+}
+
+function placePiece(i, side) {
+  board[i] = side;
+  if (side === WHITE) placedWhite++;
+  else placedBlack++;
+}
+
+function canMoveAnywhere(i, side) {
+  if (remainingPieces(side) === 3) return true;
+  return adj[i].some(n => board[n] === EMPTY);
+}
+
+function remainingPieces(side) {
+  return board.filter(v => v===side).length;
+}
+
+function nextSide(s) {
+  return s===WHITE ? BLACK : WHITE;
+}
+
+function updateInfoBar() {
+  const modeText = document.querySelector('#mode-text');
+  const turnText = document.querySelector('#turn-text');
+  const roleText = document.querySelector('#role-text');
+
+  if (mode === MODE.SINGLE) {
+    const who = humanSide === WHITE ? '플레이어(흰)' : '플레이어(검)';
+    modeText.textContent = `혼자 게임하기: ${who}`;
+  } else {
+    modeText.textContent = `둘이 게임하기`;
+  }
+
+  turnText.textContent = currentSide === WHITE ? '흰 말 차례' : '검은 말 차례';
+
+  if (gamePhase === 'placing')
+    roleText.textContent = `포석 단계: 번갈아 9개씩 말 놓기`;
+  else
+    roleText.textContent = `이동 단계: 인접한 칸으로 이동`;
+}
+
+function updateBoardUI() {
+  document.querySelectorAll('.cell').forEach(cell => {
+    const idx = Number(cell.dataset.index);
+    const v = board[idx];
+    cell.classList.remove('empty','W','B','selected');
+    if (v === EMPTY) cell.classList.add('empty');
+    else cell.classList.add(v);
+  });
+}
+
+function checkGameOver() {
+  const whiteCount = remainingPieces(WHITE);
+  const blackCount = remainingPieces(BLACK);
+
+  if (whiteCount <= 2) return BLACK;
+  if (blackCount <= 2) return WHITE;
+
+  if (gamePhase === 'moving') {
+    let wMove = board
+      .map((v,i)=>(v===WHITE && canMoveAnywhere(i,WHITE)))
+      .some(v=>v);
+    let bMove = board
+      .map((v,i)=>(v===BLACK && canMoveAnywhere(i,BLACK)))
+      .some(v=>v);
+    if (!wMove) return BLACK;
+    if (!bMove) return WHITE;
+  }
+
+  return null;
+}
+
+function showResult(winner) {
+  const ov=document.getElementById('result-overlay');
+  const msg=document.getElementById('result-message');
+  const detail=document.getElementById('result-detail');
+  msg.textContent = winner===WHITE ? '흰 말 승!' : '검은 말 승!';
+  detail.textContent = '상대방이 2개 이하이거나 이동 불가 상태가 되었습니다.';
+  ov.classList.remove('hidden');
+}
+
+function startSingle() {
+  mode = MODE.SINGLE;
+  resetGame();
+
+  humanSide = Math.random() < 0.5 ? WHITE : BLACK;
+  aiSide = nextSide(humanSide);
+
+  document.getElementById('start-screen').classList.add('hidden');
+  document.getElementById('game-screen').classList.remove('hidden');
+
+  updateInfoBar();
+
+  if (currentSide === aiSide)
+    setTimeout(aiTurn, 1000);
+}
+
+function startMulti() {
+  mode = MODE.MULTI;
+  resetGame();
+
+  document.getElementById('start-screen').classList.add('hidden');
+  document.getElementById('game-screen').classList.remove('hidden');
+
+  updateInfoBar();
+}
+
+function resetGame() {
+  board = Array(24).fill(EMPTY);
+  currentSide = WHITE;
+  placedWhite = 0;
+  placedBlack = 0;
+  gamePhase = 'placing';
+  selectedIndex = null;
+  updateBoardUI();
+  updateInfoBar();
+}
+
+function handleCellClick(e) {
+  const idx = Number(e.target.dataset.index);
+  const v = board[idx];
+
+  if (gamePhase === 'placing') {
+    if (v !== EMPTY) return;
+
+    if (mode===MODE.SINGLE && currentSide!==humanSide) return;
+
+    placePiece(idx, currentSide);
+    updateBoardUI();
+
+    if (hasMill(idx, currentSide)) {
+      let list = enemyPieces(currentSide===WHITE?BLACK:WHITE);
+      removePieceAt(list[0]);
+    }
+
+    if (placedWhite===9 && placedBlack===9) gamePhase='moving';
+
+    let w = checkGameOver();
+    if (w) return showResult(w);
+
+    currentSide = nextSide(currentSide);
+    updateInfoBar();
+
+    if (mode===MODE.SINGLE && currentSide===aiSide)
+      setTimeout(aiTurn,1000);
+
+    return;
+  }
+
+  if (gamePhase === 'moving') {
+    if (mode===MODE.SINGLE && currentSide!==humanSide) return;
+
+    if (selectedIndex === null) {
+      if (v !== currentSide) return;
+      selectedIndex = idx;
+      document.querySelector(`.cell[data-index="${idx}"]`).classList.add('selected');
+      return;
+    }
+
+    const from = selectedIndex;
+    const to = idx;
+
+    if (board[to]===EMPTY && adj[from].includes(to)) {
+      board[from]=EMPTY;
+      board[to]=currentSide;
+      selectedIndex=null;
+      updateBoardUI();
+
+      if (hasMill(to, currentSide)) {
+        let list = enemyPieces(currentSide===WHITE?BLACK:WHITE);
+        removePieceAt(list[0]);
+      }
+
+      let w = checkGameOver();
+      if (w) return showResult(w);
+
+      currentSide = nextSide(currentSide);
+      updateInfoBar();
+
+      if (mode===MODE.SINGLE && currentSide===aiSide)
+        setTimeout(aiTurn,1000);
+
+    } else {
+      document.querySelector(`.cell[data-index="${from}"]`).classList.remove('selected');
       selectedIndex=null;
     }
-    function resetBoardVisual(){
-      boardEl.querySelectorAll('.cell').forEach(c=>{
-        c.className='cell empty';
-      });
-    }
-    function placePiece(i,side){
-      board[i]=side;
-      pieceCount[side]++;
-      const el=cellEl(i);
-      if(el){
-        el.classList.remove('empty','W','B','selected');
-        el.classList.add(side);
-      }
-    }
-    function movePiece(from,to,side){
-      board[from]=EMPTY;
-      board[to]=side;
-      const a=cellEl(from), b=cellEl(to);
-      if(a){a.className='cell empty';}
-      if(b){
-        b.classList.remove('empty','W','B','selected');
-        b.classList.add(side);
-      }
-    }
-    function removePiece(i,side){
-      if(board[i]!==side) return;
-      board[i]=EMPTY;
-      pieceCount[side]--;
-      const el=cellEl(i);
-      if(el){el.className='cell empty';}
-    }
-    function isMillAt(index,side){
-      return mills.some(m=>m.includes(index) && m.every(i=>board[i]===side));
+  }
+}
+
+function aiTurn() {
+  let empty = board.map((v,i)=>(v===EMPTY?i:null)).filter(v=>v!==null);
+
+  if (gamePhase==='placing') {
+    let i = empty[Math.floor(Math.random()*empty.length)];
+    placePiece(i,aiSide);
+    updateBoardUI();
+
+    if (hasMill(i,aiSide)) {
+      let list = enemyPieces(humanSide);
+      removePieceAt(list[0]);
     }
 
-    function existsRemovableOpponentPiece(forSide){
-      const opp=otherSide(forSide);
-      return pieceCount[opp]>0;
-    }
-    function canRemoveThis(i,removerSide){
-      const opp=otherSide(removerSide);
-      return board[i]===opp;
-    }
+    if (placedWhite===9 && placedBlack===9) gamePhase='moving';
 
-    function hasAnyLegalMove(side){
-      if(piecesToPlace.W>0 || piecesToPlace.B>0) return true;
-      if(pieceCount[side]<=2) return false;
-      for(let i=0;i<24;i++){
-        if(board[i]!==side) continue;
-        for(const n of neighbors[i]) if(board[n]===EMPTY) return true;
-      }
-      return false;
-    }
+    let w = checkGameOver();
+    if (w) return showResult(w);
 
-    // ---- 평가 함수 (조금 더 똑똑한 AI용) ----
-    function countPiecesOnBoard(side, arr){
-      let c=0;
-      for(let i=0;i<24;i++) if(arr[i]===side) c++;
-      return c;
-    }
+    currentSide = humanSide;
+    updateInfoBar();
+    return;
+  }
 
-    function countPotentialMills(side, arr){
-      let score=0;
-      for(const m of mills){
-        const cells = m.map(i=>arr[i]);
-        const own = cells.filter(v=>v===side).length;
-        const opp = cells.filter(v=>v && v!==side).length;
-        if(opp>0) continue;
-        if(own===3) score+=2;
-        else if(own===2) score+=1;
-      }
-      return score;
+  if (gamePhase==='moving') {
+    let movables = board
+      .map((v,i)=>({v,i}))
+      .filter(o=>o.v===aiSide && canMoveAnywhere(o.i,aiSide));
+
+    let from = movables[Math.floor(Math.random()*movables.length)].i;
+    let targets = adj[from].filter(n=>board[n]===EMPTY);
+    let to = targets[Math.floor(Math.random()*targets.length)];
+
+    board[from]=EMPTY;
+    board[to]=aiSide;
+    updateBoardUI();
+
+    if (hasMill(to,aiSide)) {
+      let list = enemyPieces(humanSide);
+      removePieceAt(list[0]);
     }
 
-    function countLegalMovesForSide(side, arr){
-      const hasPlacing = piecesToPlace.W>0 || piecesToPlace.B>0;
-      if(hasPlacing){
-        let empties=0;
-        for(let i=0;i<24;i++) if(arr[i]===EMPTY) empties++;
-        return empties;
-      }
-      if(countPiecesOnBoard(side,arr)<=2) return 0;
-      let cnt=0;
-      for(let i=0;i<24;i++){
-        if(arr[i]!==side) continue;
-        for(const n of neighbors[i]) if(arr[n]===EMPTY) cnt++;
-      }
-      return cnt;
-    }
+    let w = checkGameOver();
+    if (w) return showResult(w);
 
-    function evaluateBoardForSide(side, arr){
-      const opp = otherSide(side);
-      const myPieces  = countPiecesOnBoard(side, arr);
-      const oppPieces = countPiecesOnBoard(opp,  arr);
+    currentSide = humanSide;
+    updateInfoBar();
+  }
+}
 
-      let score = 0;
-      score += (myPieces - oppPieces) * 10;
+document.querySelectorAll('.cell').forEach(c=>{
+  c.addEventListener('click',handleCellClick);
+});
 
-      const myPot  = countPotentialMills(side, arr);
-      const oppPot = countPotentialMills(opp,  arr);
-      score += (myPot - oppPot) * 3;
+document.getElementById('btn-single').onclick=startSingle;
+document.getElementById('btn-multi').onclick=startMulti;
 
-      const myMoves  = countLegalMovesForSide(side, arr);
-      const oppMoves = countLegalMovesForSide(opp,  arr);
-      score += (myMoves - oppMoves);
+document.getElementById('btn-back').onclick=()=>{
+  document.getElementById('game-screen').classList.add('hidden');
+  document.getElementById('start-screen').classList.remove('hidden');
+};
 
-      return score;
-    }
+document.getElementById('btn-restart').onclick=()=>{
+  document.getElementById('result-overlay').classList.add('hidden');
+  if (mode===MODE.SINGLE) startSingle();
+  else startMulti();
+};
+document.getElementById('btn-to-start').onclick=()=>{
+  document.getElementById('result-overlay').classList.add('hidden');
+  document.getElementById('game-screen').classList.add('hidden');
+  document.getElementById('start-screen').classList.remove('hidden');
+};
+</script>
 
-    function checkGameOver(afterSide){
-      const opp=otherSide(afterSide);
-      if(pieceCount[opp]<=2 && piecesToPlace.W===0 && piecesToPlace.B===0){
-        endGame(afterSide,'pieces'); return true;
-      }
-      if(piecesToPlace.W===0 && piecesToPlace.B===0 && !hasAnyLegalMove(opp)){
-        endGame(afterSide,'noMoves'); return true;
-      }
-      return false;
-    }
-
-    function updateInfoBar(){
-      if(mode===MODE.SINGLE){
-        const who = humanSide===WHITE ? '플레이어 = 흰 말(선공)' : '플레이어 = 검은 말(후공)';
-        modeText.textContent=`모드: 혼자 게임하기 (${who})`;
-        roleText.textContent = humanSide===WHITE ? '플레이어 말: 흰 말' : '플레이어 말: 검은 말';
-      } else if(mode===MODE.MULTI){
-        modeText.textContent='모드: 둘이 게임하기';
-        roleText.textContent='';
-      } else {
-        modeText.textContent='';
-        roleText.textContent='';
-      }
-
-      let turn = currentSide===WHITE ? '흰 말 차례' : '검은 말 차례';
-      if(mode===MODE.SINGLE){
-        turn += currentSide===humanSide ? ' (플레이어)' : ' (컴퓨터)';
-      }
-      turnText.textContent=turn;
-
-      if(mustRemoveSide && mustRemoveSide===currentSide){
-        hintText.textContent='밀 완성! 상대 말을 하나 클릭해서 제거하세요.';
-        return;
-      }
-
-      if(piecesToPlace.W>0 || piecesToPlace.B>0){
-        hintText.textContent='포석 단계: 번갈아 자신의 말을 빈 점에 놓습니다. (각 9개)';
-      } else {
-        hintText.textContent='이동 단계: 자신의 말을 인접한 빈 점으로 한 칸씩 이동합니다. (대각선·점프 없음)';
-      }
-    }
-
-    function endGame(winner, reason){
-      gameOver=true;
-      let msg='', detail='';
-      if(mode===MODE.SINGLE){
-        msg = winner===humanSide ? '플레이어 승!' : '컴퓨터 승!';
-      } else {
-        msg = winner===WHITE ? '흰 말 승!' : '검은 말 승!';
-      }
-      if(reason==='noMoves') detail='상대가 더 이상 움직일 수 없어서 승리했습니다.';
-      else if(reason==='pieces') detail='상대 말이 2개 이하로 남아서 승리했습니다.';
-      resultMessage.textContent=msg;
-      resultDetail.textContent=detail;
-      resultOverlay.classList.remove('hidden');
-    }
-
-    function initGameState(){
-      board=Array(24).fill(EMPTY);
-      piecesToPlace={W:9,B:9};
-      pieceCount={W:0,B:0};
-      currentSide=WHITE;
-      gameOver=false;
-      mustRemoveSide=null;
-      clearSelection();
-      resetBoardVisual();
-    }
-
-    function goToGameScreen(){
-      startScreen.classList.add('hidden');
-      gameScreen.classList.remove('hidden');
-    }
-    function goToStartScreen(){
-      gameScreen.classList.add('hidden');
-      startScreen.classList.remove('hidden');
-      resultOverlay.classList.add('hidden');
-    }
-
-    function startSingleGame(){
-      mode=MODE.SINGLE;
-      initGameState();
-      humanSide = Math.random()<0.5 ? WHITE : BLACK;
-      aiSide    = otherSide(humanSide);
-      goToGameScreen();
-      updateInfoBar();
-      if(currentSide===aiSide) setTimeout(aiTurn, AI_DELAY);
-    }
-    function startMultiGame(){
-      mode=MODE.MULTI;
-      humanSide=null; aiSide=null;
-      initGameState();
-      goToGameScreen();
-      updateInfoBar();
-    }
-    function restartCurrentMode(){
-      resultOverlay.classList.add('hidden');
-      if(mode===MODE.SINGLE) startSingleGame();
-      else if(mode===MODE.MULTI) startMultiGame();
-    }
-
-    // 클릭 처리
-    function handleBoardClick(idx){
-      if(gameOver) return;
-      if(mode===MODE.SINGLE && currentSide===aiSide) return;
-
-      if(mustRemoveSide){
-        if(mustRemoveSide!==currentSide) return;
-        if(!canRemoveThis(idx,currentSide)) return;
-        const opp=otherSide(currentSide);
-        removePiece(idx,opp);
-        mustRemoveSide=null;
-        if(checkGameOver(currentSide)) return;
-        currentSide=otherSide(currentSide);
-        clearSelection();
-        updateInfoBar();
-        if(mode===MODE.SINGLE && currentSide===aiSide) setTimeout(aiTurn, AI_DELAY);
-        return;
-      }
-
-      if(piecesToPlace.W>0 || piecesToPlace.B>0){
-        handlePlacingClick(idx);
-      } else {
-        handleMovingClick(idx);
-      }
-    }
-
-    function handlePlacingClick(idx){
-      if(board[idx]!==EMPTY) return;
-      placePiece(idx,currentSide);
-      piecesToPlace[currentSide]--;
-
-      if(isMillAt(idx,currentSide) && existsRemovableOpponentPiece(currentSide)){
-        mustRemoveSide=currentSide;
-        updateInfoBar();
-        return;
-      }
-      if(checkGameOver(currentSide)) return;
-
-      currentSide=otherSide(currentSide);
-      updateInfoBar();
-      if(mode===MODE.SINGLE && currentSide===aiSide) setTimeout(aiTurn, AI_DELAY);
-    }
-
-    function handleMovingClick(idx){
-      const side=currentSide;
-      if(selectedIndex===null){
-        if(board[idx]!==side) return;
-        selectedIndex=idx;
-        cellEl(idx)?.classList.add('selected');
-      } else {
-        if(idx===selectedIndex){ clearSelection(); return; }
-
-        if(board[idx]!==EMPTY){
-          if(board[idx]===side){
-            cellEl(selectedIndex)?.classList.remove('selected');
-            selectedIndex=idx;
-            cellEl(idx)?.classList.add('selected');
-          }
-          return;
-        }
-
-        const from=selectedIndex, to=idx;
-        if(!neighbors[from].includes(to)) return;
-
-        movePiece(from,to,side);
-        clearSelection();
-
-        if(isMillAt(to,side) && existsRemovableOpponentPiece(side)){
-          mustRemoveSide=side;
-          updateInfoBar();
-          return;
-        }
-        if(checkGameOver(side)) return;
-        currentSide=otherSide(currentSide);
-        updateInfoBar();
-        if(mode===MODE.SINGLE && currentSide===aiSide) setTimeout(aiTurn, AI_DELAY);
-      }
-    }
-
-    // ---------- AI ----------
-    function aiTurn(){
-      if(gameOver || currentSide!==aiSide) return;
-
-      if(mustRemoveSide===aiSide){
-        const target=pickAiRemoveTarget(aiSide);
-        if(target!==null){
-          const opp=otherSide(aiSide);
-          removePiece(target,opp);
-          mustRemoveSide=null;
-          if(checkGameOver(aiSide)) return;
-          currentSide=otherSide(aiSide);
-          updateInfoBar();
-        }
-        return;
-      }
-
-      // 포석 단계
-      if(piecesToPlace.W>0 || piecesToPlace.B>0){
-        const idx=pickAiPlaceIndex(aiSide);
-        if(idx===null) return;
-        placePiece(idx,aiSide);
-        piecesToPlace[aiSide]--;
-
-        if(isMillAt(idx,aiSide) && existsRemovableOpponentPiece(aiSide)){
-          mustRemoveSide=aiSide;
-          updateInfoBar();
-          setTimeout(aiTurn, AI_CHAIN_DELAY);
-          return;
-        }
-        if(checkGameOver(aiSide)) return;
-        currentSide=otherSide(aiSide);
-        updateInfoBar();
-        return;
-      }
-
-      // 이동 단계
-      const move=pickAiMove(aiSide);
-      if(!move){
-        if(!hasAnyLegalMove(aiSide)) endGame(otherSide(aiSide),'noMoves');
-        return;
-      }
-      movePiece(move.from,move.to,aiSide);
-      if(isMillAt(move.to,aiSide) && existsRemovableOpponentPiece(aiSide)){
-        mustRemoveSide=aiSide;
-        updateInfoBar();
-        setTimeout(aiTurn, AI_CHAIN_DELAY);
-        return;
-      }
-      if(checkGameOver(aiSide)) return;
-      currentSide=otherSide(aiSide);
-      updateInfoBar();
-    }
-
-    function pickAiPlaceIndex(side){
-      const opp=otherSide(side);
-      const empties=[];
-      for(let i=0;i<24;i++) if(board[i]===EMPTY) empties.push(i);
-      if(!empties.length) return null;
-
-      // 1) 바로 밀 만드는 수
-      const winningMoves=[];
-      for(const i of empties){
-        board[i]=side;
-        if(isMillAt(i,side)) winningMoves.push(i);
-        board[i]=EMPTY;
-      }
-      if(winningMoves.length){
-        return winningMoves[Math.floor(Math.random()*winningMoves.length)];
-      }
-
-      // 2) 상대 밀 막는 수
-      const blockMoves=[];
-      for(const i of empties){
-        board[i]=opp;
-        if(isMillAt(i,opp)) blockMoves.push(i);
-        board[i]=EMPTY;
-      }
-      if(blockMoves.length){
-        return blockMoves[Math.floor(Math.random()*blockMoves.length)];
-      }
-
-      // 3) 평가 함수로 가장 좋은 수 선택
-      let bestIndex=null;
-      let bestScore=-Infinity;
-      for(const i of empties){
-        board[i]=side;
-        const score=evaluateBoardForSide(side, board);
-        board[i]=EMPTY;
-        if(score>bestScore){
-          bestScore=score;
-          bestIndex=i;
-        }
-      }
-      return bestIndex ?? empties[0];
-    }
-
-    function pickAiRemoveTarget(side){
-      const opp=otherSide(side);
-      const cand=[];
-      for(let i=0;i<24;i++) if(board[i]===opp) cand.push(i);
-      if(!cand.length) return null;
-      let best=cand[0], bestScore=-Infinity;
-      for(const i of cand){
-        const saved=board[i];
-        board[i]=EMPTY;
-        const score=evaluateBoardForSide(side, board);
-        board[i]=saved;
-        if(score>bestScore){ bestScore=score; best=i; }
-      }
-      return best;
-    }
-
-    function pickAiMove(side){
-      const opp=otherSide(side);
-      const moves=[];
-      for(let from=0;from<24;from++){
-        if(board[from]!==side) continue;
-        for(const to of neighbors[from]) if(board[to]===EMPTY) moves.push({from,to});
-      }
-      if(!moves.length) return null;
-
-      // 1) 밀 만드는 이동
-      const millMoves=[];
-      for(const m of moves){
-        board[m.from]=EMPTY; board[m.to]=side;
-        const ok=isMillAt(m.to,side);
-        board[m.to]=EMPTY; board[m.from]=side;
-        if(ok) millMoves.push(m);
-      }
-      if(millMoves.length){
-        return millMoves[Math.floor(Math.random()*millMoves.length)];
-      }
-
-      // 2) 상대 밀 막는 이동
-      const blockMoves=[];
-      for(const m of moves){
-        board[m.from]=EMPTY; board[m.to]=opp;
-        const ok=isMillAt(m.to,opp);
-        board[m.to]=EMPTY; board[m.from]=side;
-        if(ok) blockMoves.push(m);
-      }
-      if(blockMoves.length){
-        return blockMoves[Math.floor(Math.random()*blockMoves.length)];
-      }
-
-      // 3) 평가 함수로 가장 좋은 이동
-      let bestMove=moves[0];
-      let bestScore=-Infinity;
-      for(const m of moves){
-        const from=m.from, to=m.to;
-        board[from]=EMPTY; board[to]=side;
-        const score=evaluateBoardForSide(side, board);
-        board[to]=EMPTY; board[from]=side;
-        if(score>bestScore){
-          bestScore=score;
-          bestMove=m;
-        }
-      }
-      return bestMove;
-    }
-
-    // 이벤트 바인딩
-    document.getElementById('btn-single').addEventListener('click',startSingleGame);
-    document.getElementById('btn-multi').addEventListener('click',startMultiGame);
-    document.getElementById('btn-back').addEventListener('click',goToStartScreen);
-    document.getElementById('btn-restart').addEventListener('click',restartCurrentMode);
-    document.getElementById('btn-to-start').addEventListener('click',()=>{
-      resultOverlay.classList.add('hidden');
-      goToStartScreen();
-    });
-
-    boardEl.addEventListener('click',e=>{
-      const cell=e.target.closest('.cell');
-      if(!cell) return;
-      const idx=Number(cell.dataset.index);
-      handleBoardClick(idx);
-    });
-  </script>
 </body>
 </html>
