@@ -5,12 +5,15 @@
 <title>Nine Men's Morris</title>
 <style>
 :root{
-  --board-bg:#d1d5db;
-  --board-edge:#4b5563;
-  --line:#4b5563;
-  --white-piece:#fef3c7;
-  --white-border:#b45309;
-  --black-piece:#020617;
+  --board-bg1:#f3f4f6;
+  --board-bg2:#d7dde5;
+  --board-edge:#cbd5e1;
+  --line:#9aa3ad;
+  --white-piece-light:#fff8ed;
+  --white-piece-dark:#e8ddc8;
+  --black-piece-light:#202127;
+  --black-piece-dark:#050609;
+  --white-border:#d6c9a7;
   --black-border:#e5e7eb;
 }
 
@@ -19,7 +22,7 @@
 body{
   margin:0;
   padding:40px 16px;
-  background:#f3f4f6;
+  background:linear-gradient(135deg,#f9fafb,#e5e7eb);
   font-family:ui-sans-serif,system-ui,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",Segoe UI,Roboto,Helvetica,Arial;
   text-align:center;
 }
@@ -31,15 +34,20 @@ button{
   margin:6px;
   font-size:15px;
   cursor:pointer;
-  border-radius:8px;
-  border:1px solid #4b5563;
-  background:#fff;
+  border-radius:999px;
+  border:1px solid #cbd5e1;
+  background:#ffffff;
+  color:#111827;
   transition:0.15s;
 }
 button:hover{
   transform:translateY(-1px);
   background:#f9fafb;
   box-shadow:0 4px 10px rgba(0,0,0,0.12);
+}
+button:active{
+  transform:translateY(0);
+  box-shadow:none;
 }
 
 .hidden{display:none;}
@@ -68,22 +76,22 @@ button:hover{
 }
 
 .turn-pill{
-  padding:4px 12px;
+  padding:4px 14px;
   border-radius:999px;
   font-size:13px;
   font-weight:600;
   display:inline-flex;
   align-items:center;
-  gap:6px;
+  gap:8px;
+  border:1px solid #d1d5db;
 }
 .turn-dot{
-  width:10px;height:10px;border-radius:50%;
+  width:11px;height:11px;border-radius:50%;
   border:1px solid rgba(0,0,0,0.25);
 }
 .turn-pill.white{
   background:#fefce8;
   color:#92400e;
-  border:1px solid #fbbf24;
 }
 .turn-pill.white .turn-dot{
   background:#fef3c7;
@@ -91,7 +99,6 @@ button:hover{
 .turn-pill.black{
   background:#020617;
   color:#e5e7eb;
-  border:1px solid #9ca3af;
 }
 .turn-pill.black .turn-dot{
   background:#020617;
@@ -112,20 +119,23 @@ button:hover{
   max-width:90vw;
   aspect-ratio:1/1;
   position:relative;
-  border-radius:24px;
-  background:radial-gradient(circle at 20% -10%,#e5e7eb,var(--board-bg));
-  border:3px solid var(--board-edge);
-  box-shadow:0 12px 40px rgba(0,0,0,0.22);
+  border-radius:28px;
+  background:
+    radial-gradient(circle at 20% -10%,#ffffff,transparent 55%),
+    radial-gradient(circle at 100% 120%,#e5e7eb,transparent 60%),
+    linear-gradient(145deg,var(--board-bg1),var(--board-bg2));
+  border:2px solid var(--board-edge);
+  box-shadow:0 14px 40px rgba(0,0,0,0.2);
   overflow:hidden;
-  transition:box-shadow 0.2s ease, border-color 0.2s ease;
+  transition:box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s;
 }
 #board.turn-white{
-  box-shadow:0 14px 42px rgba(59,130,246,0.35);
-  border-color:#93c5fd;
+  border-color:#bfdbfe;
+  box-shadow:0 18px 46px rgba(59,130,246,0.35);
 }
 #board.turn-black{
-  box-shadow:0 14px 42px rgba(15,23,42,0.55);
-  border-color:#4b5563;
+  border-color:#cbd5e1;
+  box-shadow:0 18px 46px rgba(15,23,42,0.45);
 }
 
 /* 이동 가능 경로 라인 (adjacency 기반) */
@@ -136,14 +146,15 @@ button:hover{
 }
 #edges line{
   stroke:var(--line);
-  stroke-width:1.6;   /* ★ 더 얇게 */
+  stroke-width:1.4;   /* 얇은 라인 */
   stroke-linecap:round;
+  filter:drop-shadow(0 0 1px rgba(0,0,0,0.25)); /* 홈 느낌 */
 }
 
 /* 24개 점(말) */
 .cell{
-  width:26px;
-  height:26px;
+  width:28px;
+  height:28px;
   border-radius:50%;
   position:absolute;
   transform:translate(-50%,-50%);
@@ -152,34 +163,54 @@ button:hover{
   transition:transform 0.15s ease, box-shadow 0.15s ease;
 }
 .cell.empty{
-  background:#e5e7eb;
-  border:2px solid var(--board-edge);
-}
-.cell.W{
-  background:var(--white-piece);
-  border:3px solid var(--white-border);
-  box-shadow:0 0 0 2px rgba(255,255,255,0.7);
-}
-.cell.B{
-  background:var(--black-piece);
-  border:3px solid var(--black-border);
-  box-shadow:0 0 0 2px rgba(0,0,0,0.5);
-}
-.cell.selected{
-  box-shadow:0 0 0 5px rgba(59,130,246,0.95);
-  transform:translate(-50%,-50%) scale(1.1);
+  background:radial-gradient(circle at 30% 30%,#f9fafb,#e5e7eb);
+  border:2px solid #cbd5e1;
+  box-shadow:inset 0 0 0 1px rgba(148,163,184,0.25);
 }
 
-/* 놓거나 옮길 때 “톡” 튀는 모션 */
-.cell.pulse{
-  animation:pulsePiece 0.18s ease-out;
+/* 스톤 스타일 말 */
+.cell.W{
+  background:
+    radial-gradient(circle at 30% 25%, var(--white-piece-light), var(--white-piece-dark));
+  border:2px solid var(--white-border);
+  box-shadow:
+    0 3px 6px rgba(0,0,0,0.25),
+    inset 0 1px 2px rgba(255,255,255,0.9);
 }
-@keyframes pulsePiece{
-  0%{transform:translate(-50%,-50%) scale(0.8);}
-  60%{transform:translate(-50%,-50%) scale(1.15);}
+.cell.B{
+  background:
+    radial-gradient(circle at 30% 25%, var(--black-piece-light), var(--black-piece-dark));
+  border:2px solid var(--black-border);
+  box-shadow:
+    0 3px 7px rgba(0,0,0,0.5),
+    inset 0 1px 1px rgba(255,255,255,0.15);
+}
+
+/* 선택된 말 */
+.cell.selected{
+  box-shadow:
+    0 0 0 5px rgba(59,130,246,0.55),
+    0 4px 8px rgba(15,23,42,0.4);
+  transform:translate(-50%,-50%) scale(1.12);
+}
+
+/* 놓거나 도착할 때 ‘툭’ 효과 */
+.cell.pulse{
+  animation:stoneDrop 0.18s ease-out;
+}
+@keyframes stoneDrop{
+  0%{transform:translate(-50%,-50%) scale(0.7); opacity:0.3;}
+  70%{transform:translate(-50%,-50%) scale(1.18); opacity:1;}
   100%{transform:translate(-50%,-50%) scale(1);}
 }
 
+/* 이동용 고스트 피스 (실제 이동 애니메이션) */
+.cell.ghost{
+  pointer-events:none;
+  transition:left 0.25s linear, top 0.25s linear;
+}
+
+/* 힌트 텍스트 */
 #hint-text{
   margin-top:8px;
   font-size:13px;
@@ -187,11 +218,11 @@ button:hover{
   min-height:18px;
 }
 
-/* 결과 오버레이 */
+/* 결과 오버레이: 유리 패널 느낌 */
 #result-overlay{
   position:fixed;
   inset:0;
-  background:rgba(15,23,42,0.55);
+  background:rgba(15,23,42,0.35);
   display:flex;
   align-items:center;
   justify-content:center;
@@ -199,21 +230,24 @@ button:hover{
 }
 #result-overlay.hidden{display:none;}
 #result-box{
-  background:#111827;
-  color:#f9fafb;
+  background:rgba(255,255,255,0.72);
+  backdrop-filter:blur(10px);
+  color:#0f172a;
   padding:20px;
-  border-radius:14px;
-  border:1px solid #4b5563;
+  border-radius:18px;
+  border:1px solid rgba(148,163,184,0.7);
   min-width:260px;
+  box-shadow:0 18px 40px rgba(15,23,42,0.4);
 }
 #result-message{
   font-size:22px;
   margin-bottom:10px;
+  font-weight:700;
 }
 #result-box p{
   margin:4px 0 14px;
   font-size:14px;
-  color:#e5e7eb;
+  color:#1f2933;
 }
 </style>
 </head>
@@ -222,8 +256,8 @@ button:hover{
 <!-- 시작 화면 -->
 <div id="start-screen">
   <h1>Nine Men's Morris</h1>
-  <p>혼자 게임하기: 플레이어 vs 컴퓨터 (선/후공 랜덤)</p>
-  <p>둘이 게임하기: 같은 컴퓨터에서 번갈아 두기</p>
+  <p>혼자 게임하기: 플레이어 vs 컴퓨터 (선·후공 랜덤)</p>
+  <p>둘이 게임하기: 같은 화면에서 번갈아 두기</p>
   <button id="btn-single">혼자 게임하기</button>
   <button id="btn-multi">둘이 게임하기</button>
 </div>
@@ -292,7 +326,7 @@ button:hover{
 const MODE = { SINGLE:'single', MULTI:'multi' };
 const EMPTY = null, WHITE='W', BLACK='B';
 const MAX_PIECES = 9;
-const AI_DELAY = 650; // 0.5초 → 30% 느리게
+const AI_DELAY = 700; // 0.7초
 
 let mode = null;
 let board = Array(24).fill(EMPTY);
@@ -305,6 +339,7 @@ let aiSide = null;
 let gameOver = false;
 let mustRemoveSide = null;   // 밀을 만들어서 제거해야 하는 쪽
 let selectedIndex = null;
+let isAnimating = false;     // 이동 애니메이션 중인지
 
 /* DOM */
 const startScreen   = document.getElementById('start-screen');
@@ -404,39 +439,32 @@ function resetBoardVisual(){
     c.className='cell empty';
   });
 }
+function syncBoardToUI(){
+  for(let i=0;i<24;i++){
+    const el=cellEl(i);
+    if(!el) continue;
+    el.className='cell';
+    if(board[i]===EMPTY) el.classList.add('empty');
+    else el.classList.add(board[i]);
+  }
+}
 function pulseCell(i){
   const el = cellEl(i);
   if(!el) return;
   el.classList.add('pulse');
-  setTimeout(()=>el.classList.remove('pulse'),180);
+  setTimeout(()=>el.classList.remove('pulse'),200);
 }
 function placePiece(i,side){
   board[i]=side;
   pieceCount[side]++;
-  const el=cellEl(i);
-  if(el){
-    el.classList.remove('empty','W','B','selected');
-    el.classList.add(side);
-    pulseCell(i);
-  }
-}
-function movePiece(from,to,side){
-  board[from]=EMPTY;
-  board[to]=side;
-  const a=cellEl(from), b=cellEl(to);
-  if(a) a.className='cell empty';
-  if(b){
-    b.classList.remove('empty','W','B','selected');
-    b.classList.add(side);
-    pulseCell(to);
-  }
+  syncBoardToUI();
+  pulseCell(i);
 }
 function removePiece(i,side){
   if(board[i]!==side) return;
   board[i]=EMPTY;
   pieceCount[side]--;
-  const el=cellEl(i);
-  if(el) el.className='cell empty';
+  syncBoardToUI();
 }
 function isMillAt(i,side){
   return mills.some(m=>m.includes(i) && m.every(j=>board[j]===side));
@@ -450,7 +478,6 @@ function canRemoveThis(i,removerSide){
   return board[i]===opp;
 }
 function hasAnyLegalMove(side){
-  // 이동 단계에서만 호출됨
   if(pieceCount[side]<=2) return false;
   for(let i=0;i<24;i++){
     if(board[i]!==side) continue;
@@ -472,6 +499,39 @@ function checkGameOver(afterSide){
   return false;
 }
 
+/* from→to 실제 이동 애니메이션 */
+function animateMove(from,to,side,done){
+  isAnimating = true;
+
+  // 논리 상태 먼저 업데이트
+  board[from]=EMPTY;
+  board[to]=side;
+
+  // 실제 말은 고스트로 이동시키고, 끝나고 전체 sync
+  const ghost = document.createElement('div');
+  ghost.className='cell '+side+' ghost';
+  ghost.style.left = coord[from].x+'%';
+  ghost.style.top  = coord[from].y+'%';
+  boardEl.appendChild(ghost);
+
+  // 기존 칸은 비워둔 상태로 표시
+  syncBoardToUI();
+
+  // 다음 프레임에서 목적지로 이동
+  requestAnimationFrame(()=>{
+    ghost.style.left = coord[to].x+'%';
+    ghost.style.top  = coord[to].y+'%';
+  });
+
+  setTimeout(()=>{
+    boardEl.removeChild(ghost);
+    syncBoardToUI();
+    pulseCell(to);
+    isAnimating=false;
+    done && done();
+  },260); // 애니메이션 0.25s + 여유
+}
+
 /* ===== UI ===== */
 function updateInfoBar(){
   // 보드 테두리/그림자 색으로 현재 차례 강조
@@ -481,10 +541,12 @@ function updateInfoBar(){
   if(mode===MODE.SINGLE){
     const who = humanSide===WHITE ? '플레이어 = 흰 말(선공)' : '플레이어 = 검은 말(후공)';
     modeText.textContent = `모드: 혼자 게임하기 · ${who}`;
-    roleText.textContent = humanSide===WHITE ? '플레이어 말: 흰 말 / 컴퓨터: 검은 말' : '플레이어 말: 검은 말 / 컴퓨터: 흰 말';
+    roleText.textContent = humanSide===WHITE
+      ? '플레이어: 흰 말 · 컴퓨터: 검은 말'
+      : '플레이어: 검은 말 · 컴퓨터: 흰 말';
   }else if(mode===MODE.MULTI){
     modeText.textContent='모드: 둘이 게임하기 · P1: 흰 말 · P2: 검은 말';
-    roleText.textContent='번갈아 한 수씩 두세요.';
+    roleText.textContent='두 플레이어가 번갈아 한 수씩 둡니다.';
   }else{
     modeText.textContent='';
     roleText.textContent='';
@@ -507,7 +569,7 @@ function updateInfoBar(){
      </span>`;
 
   if(mustRemoveSide && mustRemoveSide===currentSide){
-    hintText.textContent='밀 완성! 상대 말을 하나 클릭해서 제거하세요.';
+    hintText.textContent='밀 완성! 제거할 상대 말을 클릭하세요.';
     return;
   }
 
@@ -542,7 +604,8 @@ function initGameState(){
   currentSide = WHITE;
   gameOver=false;
   mustRemoveSide=null;
-  clearSelection();
+  selectedIndex=null;
+  isAnimating=false;
   resetBoardVisual();
 }
 
@@ -562,6 +625,7 @@ function startSingleGame(){
   humanSide = Math.random()<0.5 ? WHITE : BLACK;
   aiSide    = otherSide(humanSide);
   goToGameScreen();
+  syncBoardToUI();
   updateInfoBar();
   if(currentSide===aiSide) setTimeout(aiTurn,AI_DELAY);
 }
@@ -570,6 +634,7 @@ function startMultiGame(){
   humanSide=null; aiSide=null;
   initGameState();
   goToGameScreen();
+  syncBoardToUI();
   updateInfoBar();
 }
 function restartCurrentMode(){
@@ -604,11 +669,11 @@ function onMoveFinished(lastIdx){
 
 /* ===== 사람 클릭 처리 ===== */
 function handleBoardClick(idx){
-  if(gameOver) return;
+  if(gameOver || isAnimating) return;
 
   // 제거 단계
   if(mustRemoveSide){
-    // 싱글에서 AI 차례라면 사람 입력 무시
+    // 싱글에서 AI가 제거해야 하는 턴이면 입력 무시
     if(mode===MODE.SINGLE && mustRemoveSide===aiSide) return;
     if(mustRemoveSide!==currentSide) return;
     if(!canRemoveThis(idx,currentSide)) return;
@@ -658,15 +723,15 @@ function handleBoardClick(idx){
     }
     const from=selectedIndex, to=idx;
     if(!neighbors[from].includes(to)) return; // 점프 금지
-    movePiece(from,to,side);
+
     clearSelection();
-    onMoveFinished(to);
+    animateMove(from,to,side,()=>onMoveFinished(to));
   }
 }
 
 /* ===== AI ===== */
 function aiTurn(){
-  if(gameOver) return;
+  if(gameOver || isAnimating) return;
   if(currentSide!==aiSide) return;
 
   // 1) 제거 모드일 때
@@ -701,8 +766,7 @@ function aiTurn(){
     }
     return;
   }
-  movePiece(move.from,move.to,aiSide);
-  onMoveFinished(move.to);
+  animateMove(move.from,move.to,aiSide,()=>onMoveFinished(move.to));
 }
 
 function pickAiPlaceIndex(side){
